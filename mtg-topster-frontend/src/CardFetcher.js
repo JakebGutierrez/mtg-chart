@@ -26,13 +26,12 @@ const saveToLocalStorage = useCallback(() => {
 }, [charts, selectedChart, gridItems]);
 
 useEffect(() => {
-    saveToLocalStorage();
-}, [charts, selectedChart, gridItems, saveToLocalStorage]);
-
-
-useEffect(() => {
     loadFromLocalStorage();
 }, []);
+
+useEffect(() => {
+    saveToLocalStorage();
+}, [charts, selectedChart, gridItems, saveToLocalStorage]);
 
     
     const handleSearch = async (query) => {
