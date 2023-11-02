@@ -66,6 +66,7 @@ function Sidebar({ onSearch, searchResults, showNames, setShowNames, gridSize, h
                     </label>
                 </div>
                 {/* More options here */}
+                <button>Shuffle</button>
             </details>
 
             {/* More dropdowns */}
@@ -73,14 +74,8 @@ function Sidebar({ onSearch, searchResults, showNames, setShowNames, gridSize, h
             <details className="dropdown-menu">
                 <summary>Import</summary>
                 {/* Import logic here */}
+                <h3>Import from decklist coming soon</h3>
             </details>
-
-            {/* Sample dropdown for "Changelog" */}
-            <details className="dropdown-menu">
-                <summary>Changelog</summary>
-                {/* Changelog details here */}
-            </details>
-
             {/* Add more dropdowns or other sidebar content as needed */}
         </div>
     );

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import domtoimage from 'dom-to-image';
 import Sidebar from './Sidebar';
 import './CardFetcher.css';
 
 function CardFetcher() {
     const [showNames, setShowNames] = useState(true); // default to show names
     const [layout] = useState([]);
-    const [gridSize, setGridSize] = useState(5);  // For a 3x3 grid
+    const [gridSize, setGridSize] = useState(5);
     const [searchResults, setSearchResults] = useState([]);
     const [gridItems, setGridItems] = useState(Array(gridSize * gridSize).fill(null));
     const [charts, setCharts] = useState(() => {
@@ -185,7 +186,22 @@ useEffect(() => {
         loadFromLocalStorage();
       }, [loadFromLocalStorage]); // Now it correctly lists the function as a dependency  
     
-    
+      const handleDownload = () => {
+        const element = showNames ? document.querySelector('.main-container') : document.querySelector('.grid-container');
+        
+        domtoimage.toPng(element)
+            .then(function (dataUrl) {
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                link.download = 'chart.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            })
+            .catch(function (error) {
+                console.error('Failed to capture the chart:', error);
+            });
+    };
       
     
 
@@ -196,6 +212,8 @@ useEffect(() => {
                 {charts.map(chart => <option key={chart.id} value={chart.id}>{chart.title}</option>)}
             </select>
             <button onClick={createNewChart}>+</button>
+            <button onClick={handleDownload}>Download Chart</button>
+
     
             <div className="main-container">
                 <Sidebar 
