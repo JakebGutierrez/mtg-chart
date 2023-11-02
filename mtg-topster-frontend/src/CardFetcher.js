@@ -9,29 +9,41 @@ function CardFetcher() {
     const [gridSize, setGridSize] = useState(5);  // For a 3x3 grid
     const [searchResults, setSearchResults] = useState([]);
     const [gridItems, setGridItems] = useState(Array(gridSize * gridSize).fill(null));
-    const [charts, setCharts] = useState([]); // Will contain a list of all saved charts
+    const [charts, setCharts] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('charts')) || [];
+        } catch (err) {
+            console.error("Failed to load charts from localStorage:", err);
+            return [];
+        }
+    });
 const [selectedChart, setSelectedChart] = useState(null); // Currently selected chart
 
-const saveToLocalStorage = useCallback(() => {
-    const updatedCharts = charts.map(ch => {
-      if (ch.id === selectedChart) {
-        ch.gridItems = gridItems;
-      }
-      return ch;
-    });
-    setCharts(updatedCharts);
+const saveCurrentChartIdToLocalStorage = (currentChartId) => {
+    localStorage.setItem('lastOpenedChartId', currentChartId);
+  };
+
+const saveToLocalStorage = (updatedCharts) => {
     localStorage.setItem('charts', JSON.stringify(updatedCharts));
-    // console.log("Charts saved to localStorage:", updatedCharts);
+  };  
 
-}, [charts, selectedChart, gridItems]);
 
-useEffect(() => {
-    loadFromLocalStorage();
-}, []);
 
 useEffect(() => {
-    saveToLocalStorage();
-}, [charts, selectedChart, gridItems, saveToLocalStorage]);
+    const updatedCharts = charts.map(chart => 
+      chart.id === selectedChart ? { ...chart, gridItems: gridItems } : chart
+    );
+    saveToLocalStorage(updatedCharts);
+  }, [gridItems, selectedChart, charts]);
+
+  useEffect(() => {
+    // Save to local storage whenever the selected chart changes
+    if (selectedChart) {
+      saveCurrentChartIdToLocalStorage(selectedChart);
+    }
+  }, [selectedChart]);
+  
+   
 
     
     const handleSearch = async (query) => {
@@ -100,10 +112,17 @@ useEffect(() => {
           title: `Untitled (${getCurrentDateTime()})`,
           gridItems: Array(gridSize * gridSize).fill(null),
         };
-        setCharts(prevCharts => [...prevCharts, newChart]);
+      
+        setCharts(prevCharts => {
+          const updatedCharts = [...prevCharts, newChart];
+          saveToLocalStorage(updatedCharts); // Save right after updating
+          return updatedCharts;
+        });
+      
         setSelectedChart(newChart.id);
         setGridItems(newChart.gridItems);
       }
+      
       
       function handleChartSelection(chartId) {
         const chart = charts.find(ch => ch.id === chartId);
@@ -114,32 +133,57 @@ useEffect(() => {
       }
       
       function handleDeleteChart() {
-        // Remove the selected chart from the charts list
-        const updatedCharts = charts.filter(ch => ch.id !== selectedChart);
-        setCharts(updatedCharts);
-    
-        // Set the selected chart to the last one in the updated list
-        if (updatedCharts.length > 0) {
-            setSelectedChart(updatedCharts[updatedCharts.length - 1].id);
-            setGridItems(updatedCharts[updatedCharts.length - 1].gridItems);
-        } else {
-            // No charts left
+        setCharts(prevCharts => {
+          const updatedCharts = prevCharts.filter(ch => ch.id !== selectedChart);
+          saveToLocalStorage(updatedCharts); // Save right after updating
+          
+          // Update the selected chart and grid items as necessary
+          if (updatedCharts.length > 0) {
+            const lastChart = updatedCharts[updatedCharts.length - 1];
+            setSelectedChart(lastChart.id);
+            setGridItems(lastChart.gridItems);
+          } else {
             setSelectedChart(null);
             setGridItems(Array(gridSize * gridSize).fill(null));
-        }
-    }
-    
+          }
+      
+          return updatedCharts;
+        });
+      }
+      
+  
 
-    function loadFromLocalStorage() {
-        const savedCharts = JSON.parse(localStorage.getItem('charts')) || [];
-        console.log("Charts loaded from localStorage:", savedCharts);
-        setCharts(savedCharts);
-        if (savedCharts.length) {
-            setSelectedChart(savedCharts[savedCharts.length - 1].id); // select the last chart
-        } else {
-            setSelectedChart(''); // No saved charts
+    const loadFromLocalStorage = useCallback(() => {
+        try {
+          const savedCharts = JSON.parse(localStorage.getItem('charts')) || [];
+          const lastOpenedChartId = localStorage.getItem('lastOpenedChartId');
+    
+          console.log("Charts loaded from localStorage:", savedCharts);
+          setCharts(savedCharts);
+          
+          // Check if the last opened chart ID is present and find the corresponding chart
+          const lastOpenedChart = savedCharts.find(chart => chart.id === lastOpenedChartId);
+          
+          if (lastOpenedChart) {
+            setSelectedChart(lastOpenedChart.id);
+            setGridItems(lastOpenedChart.gridItems);
+          } else if (savedCharts.length) {
+            // Fallback to the last chart if no last opened chart ID is found
+            setSelectedChart(savedCharts[savedCharts.length - 1].id);
+            setGridItems(savedCharts[savedCharts.length - 1].gridItems);
+          } else {
+            setSelectedChart('');
+            setGridItems(Array(gridSize * gridSize).fill(null));
+          }
+        } catch (err) {
+          console.error("Failed to load charts from localStorage:", err);
         }
-    }
+      }, [gridSize]);
+      
+      
+      useEffect(() => {
+        loadFromLocalStorage();
+      }, [loadFromLocalStorage]); // Now it correctly lists the function as a dependency  
     
     
       
