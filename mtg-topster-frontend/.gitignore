@@ -1,4 +1,4 @@
-frontend/node_modules/
+mtg-topster-frontend/node_modules/
 **/.cache/
 .env
 .DS_Store
