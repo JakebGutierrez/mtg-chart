@@ -1,3 +1,4 @@
+const serverless = require('serverless-http');
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
@@ -32,3 +33,5 @@ app.get('/search/:query', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server started on port ${PORT}`);
 });
+
+module.exports.handler = serverless(app);

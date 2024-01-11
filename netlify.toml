@@ -1,0 +1,9 @@
+[build]
+  base = "mtg-chart/mtg-topster-frontend"
+  publish = "mtg-chart/mtg-topster-frontend/build"
+  command = "npm run build"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
