@@ -4,7 +4,6 @@ const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 
@@ -28,10 +27,6 @@ app.get('/search/:query', async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: "Error searching for cards" });
     }
-});
-
-app.listen(PORT, () => {
-    console.log(`Server started on port ${PORT}`);
 });
 
 module.exports.handler = serverless(app);

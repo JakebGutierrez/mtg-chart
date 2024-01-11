@@ -1,2 +1,2 @@
-const { handler } = require('../path/to/your/server.js');
+const { handler } = require('../mtg-collage-backend/server.js');
 module.exports = { handler };

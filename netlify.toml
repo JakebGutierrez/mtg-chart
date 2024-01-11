@@ -2,6 +2,7 @@
   base = "mtg-topster-frontend"
   publish = "build"
   command = "yarn build"
+  functions = "netlify-functions"
 
 [[redirects]]
   from = "/api/*"
