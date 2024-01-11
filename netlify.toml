@@ -1,7 +1,7 @@
 [build]
   base = "mtg-topster-frontend"
-  publish = "mtg-topster-frontend/build"
-  command = "npm run build"
+  publish = "build"
+  command = "yarn build"
 
 [[redirects]]
   from = "/api/*"
