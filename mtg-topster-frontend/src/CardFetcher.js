@@ -47,15 +47,20 @@ useEffect(() => {
    
 
     
-    const handleSearch = async (query) => {
-        try {
-            const response = await axios.get(`http://localhost:5000/search/${query}`);
-            const limitedResults = response.data.slice(0, 20);  // Limit the results to the top 20
-            setSearchResults(limitedResults);
-        } catch (error) {
-            console.error("Error searching for cards:", error);
-        }
-    };
+  const handleSearch = async (query) => {
+    const baseUrl = process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:5000' // Local backend URL
+        : 'https://mtgchart.netlify.app/api'; // Production backend URL
+
+    try {
+        const response = await axios.get(`${baseUrl}/search/${query}`);
+        const limitedResults = response.data.slice(0, 20); // Limit the results to the top 20
+        setSearchResults(limitedResults);
+    } catch (error) {
+        console.error("Error searching for cards:", error);
+    }
+};
+
 
     function handleDragStart(event) {
         event.dataTransfer.setData("cardId", event.target.id);
