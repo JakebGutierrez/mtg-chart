@@ -5,7 +5,14 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+    origin: process.env.NODE_ENV === 'production' 
+      ? 'https://mtgchart.netlify.app/' // Netlify frontend URL
+      : 'http://localhost:3000', // Frontend URL
+    optionsSuccessStatus: 200
+  };
+  
+  app.use(cors(corsOptions));
 
 app.get('/card/:name/:set', async (req, res) => {
     try {

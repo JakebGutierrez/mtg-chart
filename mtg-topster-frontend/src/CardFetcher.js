@@ -3,6 +3,7 @@ import axios from 'axios';
 import domtoimage from 'dom-to-image';
 import Sidebar from './Sidebar';
 import './CardFetcher.css';
+const baseUrl = process.env.REACT_APP_API_URL;
 
 function CardFetcher() {
     const [showNames, setShowNames] = useState(true); // default to show names
@@ -28,8 +29,6 @@ const saveToLocalStorage = (updatedCharts) => {
     localStorage.setItem('charts', JSON.stringify(updatedCharts));
   };  
 
-
-
 useEffect(() => {
     const updatedCharts = charts.map(chart => 
       chart.id === selectedChart ? { ...chart, gridItems: gridItems } : chart
@@ -43,15 +42,8 @@ useEffect(() => {
       saveCurrentChartIdToLocalStorage(selectedChart);
     }
   }, [selectedChart]);
-  
    
-
-    
   const handleSearch = async (query) => {
-    const baseUrl = process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:5000' // Local backend URL
-        : 'https://mtgchart.netlify.app/api'; // Production backend URL
-
     try {
         const response = await axios.get(`${baseUrl}/search/${query}`);
         const limitedResults = response.data.slice(0, 20); // Limit the results to the top 20
@@ -60,7 +52,6 @@ useEffect(() => {
         console.error("Error searching for cards:", error);
     }
 };
-
 
     function handleDragStart(event) {
         event.dataTransfer.setData("cardId", event.target.id);
@@ -99,9 +90,6 @@ useEffect(() => {
         setGridItems(updatedGridItems);  // Always update grid items here
     }
     
-    
-    
-
     function handleGridSizeChange(event) {
         const newSize = parseInt(event.target.value);
         setGridSize(newSize);
@@ -156,8 +144,6 @@ useEffect(() => {
           return updatedCharts;
         });
       }
-      
-  
 
     const loadFromLocalStorage = useCallback(() => {
         try {
@@ -186,7 +172,6 @@ useEffect(() => {
         }
       }, [gridSize]);
       
-      
       useEffect(() => {
         loadFromLocalStorage();
       }, [loadFromLocalStorage]); // Now it correctly lists the function as a dependency  
@@ -208,8 +193,6 @@ useEffect(() => {
             });
     };
       
-    
-
       return (
         <div>
             <button onClick={handleDeleteChart}>-</button>
