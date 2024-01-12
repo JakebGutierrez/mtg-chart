@@ -17,28 +17,29 @@ function Sidebar({ onSearch, searchResults, showNames, setShowNames, gridSize, h
 
                 {/* Display search results */}
                 <div className="results-container">
-                    {searchResults.map(card => (
-                        card.image_uris && card.image_uris.art_crop ? (
-                            <div className="art-container" key={card.id}>
-                                <img 
-                                    className="cropped-image"
-                                    src={card.image_uris.art_crop}
-                                    alt={card.name}
-                                    draggable="true"
-                                    onDragStart={e => {
-                                        e.dataTransfer.setData("cardId", card.id);
-                                        e.dataTransfer.setData("source", "searchResult");
-                                    }}
-                                    /* ... other img properties */
-                                />
-                            </div>
-                        ) : (
-                            <div className="art-container" key={card.id}>
-                                <p>No image available for {card.name}.</p>
-                            </div>
-                        )
-                    ))}
-                </div>
+    {Array.isArray(searchResults) && searchResults.map(card => (
+        card.image_uris && card.image_uris.art_crop ? (
+            <div className="art-container" key={card.id}>
+                <img 
+                    className="cropped-image"
+                    src={card.image_uris.art_crop}
+                    alt={card.name}
+                    draggable="true"
+                    onDragStart={e => {
+                        e.dataTransfer.setData("cardId", card.id);
+                        e.dataTransfer.setData("source", "searchResult");
+                    }}
+                    // ... other img properties
+                />
+            </div>
+        ) : (
+            <div className="art-container" key={card.id}>
+                <p>No image available for {card.name}.</p>
+            </div>
+        )
+    ))}
+</div>
+
             </details>
 
             {/* Chart Options Dropdown */}

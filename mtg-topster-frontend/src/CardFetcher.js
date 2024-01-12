@@ -213,26 +213,28 @@ useEffect(() => {
                     handleGridSizeChange={handleGridSizeChange}
                 />
                 <div className={`grid-container ${layout}`} style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}>
-                    {Array.from({ length: gridSize * gridSize }).map((_, index) => {
-                        const currentCard = gridItems[index];
-                        return (
-                            <div key={index} className="grid-item" onDrop={(e) => handleDrop(e, index)} onDragOver={handleDragOver}>
-                                {currentCard && currentCard.image_uris && currentCard.image_uris.art_crop && (
-                                    <img 
-                                        className="cropped-image" 
-                                        src={currentCard.image_uris.art_crop} 
-                                        alt={currentCard.name}
-                                        draggable="true" 
-                                        onDragStart={handleDragStart} 
-                                        id={currentCard.id.toString()}
-                                        data-source="gridItem"
-                                        onDrop={handleDrop}
-                                        onDragOver={e => e.preventDefault()}
-                                    />
-                                )}
-                            </div>
-                        );
-                    })}
+                {Array.from({ length: gridSize * gridSize }).map((_, index) => {
+    const currentCard = gridItems[index];
+    const key = currentCard ? currentCard.id : `empty-${index}`;
+    return (
+        <div key={key} className="grid-item" onDrop={(e) => handleDrop(e, index)} onDragOver={handleDragOver}>
+            {currentCard && currentCard.image_uris && currentCard.image_uris.art_crop && (
+                <img 
+                    className="cropped-image" 
+                    src={currentCard.image_uris.art_crop} 
+                    alt={currentCard.name}
+                    draggable="true" 
+                    onDragStart={handleDragStart} 
+                    id={currentCard.id.toString()}
+                    data-source="gridItem"
+                    onDrop={handleDrop}
+                    onDragOver={e => e.preventDefault()}
+                />
+            )}
+        </div>
+    );
+})}
+
                 </div>
                 <div className="card-names-column">
                     {Array.from({ length: gridSize * gridSize }).map((_, index) => {

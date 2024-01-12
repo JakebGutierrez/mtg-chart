@@ -36,4 +36,9 @@ app.get('/search/:query', async (req, res) => {
     }
 });
 
+// Only listen on a port if not running in a serverless environment
+if (!process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+    app.listen(3000, () => console.log('Server is running on http://localhost:3000'));
+  }
+
 module.exports.handler = serverless(app);
