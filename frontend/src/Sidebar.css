@@ -1,27 +1,25 @@
 .sidebar {
-    width: 20%;
-    padding: 20px;
-    border-right: 1px solid #ddd; /* Sample border */
-    box-sizing: border-box;
-    overflow-y: auto;
+  width: 20%;
+  padding: 20px;
+  border-right: 1px solid #ddd; /* Sample border */
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .logo {
-    margin-bottom: 20px;
-    /* Add additional styles for your logo */
+  margin-bottom: 20px;
+  /* Add additional styles for your logo */
 }
 
 .dropdown-menu {
-    margin-bottom: 20px;
+  margin-bottom: 20px;
 }
 
 .dropdown-menu summary {
-    cursor: pointer;
-    font-weight: bold;
+  cursor: pointer;
+  font-weight: bold;
 }
 
 .option {
-    margin: 10px 0;
+  margin: 10px 0;
 }
-
-

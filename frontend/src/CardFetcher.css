@@ -1,17 +1,18 @@
 /* Shared styles for both default state and grid square */
-.art-container, .grid-item {
-    width: 100px;   /* Adjust to desired size */
-    height: 100px;
-    overflow: hidden;
-    position: relative;
+.art-container,
+.grid-item {
+  width: 100px; /* Adjust to desired size */
+  height: 100px;
+  overflow: hidden;
+  position: relative;
 }
 
 /* Image cropping styles */
 .cropped-image {
-    position: relative;
-    left: -25%;  
-    top: -10%;   
-    width: 150%;  
+  position: relative;
+  left: -25%;
+  top: -10%;
+  width: 150%;
 }
 
 /* .grid-container {
@@ -20,73 +21,69 @@
 } */
 
 .grid-container {
-    display: grid;
-    gap: 2px;
-    justify-content: center;
-    margin-top: 20px;
+  display: grid;
+  gap: 2px;
+  justify-content: center;
+  margin-top: 20px;
 }
 
-  
 .grid-item {
-    border: 2px solid #5d4d7a;
+  border: 2px solid #5d4d7a;
 }
 
 .art-container {
-    width: 100px;   /* Adjust to desired size */
-    height: 100px;
-    overflow: hidden;
-    position: relative;
-    margin: 8px; /* providing some gap between items */
+  width: 100px; /* Adjust to desired size */
+  height: 100px;
+  overflow: hidden;
+  position: relative;
+  margin: 8px; /* providing some gap between items */
 }
 
 .results-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around; /* distributes items evenly with the same space around them */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around; /* distributes items evenly with the same space around them */
 }
 
 .layout-large-center {
-    grid-template-areas: 
-        ". center ."
-        "left center right"
-        ". center .";
-    grid-template-columns: 1fr 3fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
+  grid-template-areas:
+    '. center .'
+    'left center right'
+    '. center .';
+  grid-template-columns: 1fr 3fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
 }
 
 .layout-vertical-left-strip {
-    grid-template-areas: 
-        "left right"
-        "left right"
-        "left right";
-    grid-template-columns: 1fr 3fr;
-    grid-template-rows: repeat(3, 1fr);
+  grid-template-areas:
+    'left right'
+    'left right'
+    'left right';
+  grid-template-columns: 1fr 3fr;
+  grid-template-rows: repeat(3, 1fr);
 }
 
 .card-name {
-    position: static; /* Default positioning */
-    transform: none;
-    white-space: nowrap;
+  position: static; /* Default positioning */
+  transform: none;
+  white-space: nowrap;
 }
-
 
 .main-container {
-    display: flex;
-    align-items: flex-start; 
-    justify-content: center; /* Centers the children horizontally */
-    width: 100%; /* Ensures it spans the full width of the parent/viewport */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center; /* Centers the children horizontally */
+  width: 100%; /* Ensures it spans the full width of the parent/viewport */
 }
 
-
-
 .card-names-column {
-    margin-left: 20px; /* Some spacing between the grid and the names */
-    display: flex;
-    flex-direction: column;
+  margin-left: 20px; /* Some spacing between the grid and the names */
+  display: flex;
+  flex-direction: column;
 }
 
 select {
-    width: 250px;
-    text-align: justify;
-    text-align-last: justify;
+  width: 250px;
+  text-align: justify;
+  text-align-last: justify;
 }
