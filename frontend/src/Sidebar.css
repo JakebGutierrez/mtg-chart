@@ -1,14 +1,13 @@
 .sidebar {
   width: 20%;
   padding: 20px;
-  border-right: 1px solid #ddd; /* Sample border */
+  border-right: 1px solid #ddd;
   box-sizing: border-box;
   overflow-y: auto;
 }
 
 .logo {
   margin-bottom: 20px;
-  /* Add additional styles for your logo */
 }
 
 .dropdown-menu {

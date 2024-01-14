@@ -1,7 +1,7 @@
 /* Shared styles for both default state and grid square */
 .art-container,
 .grid-item {
-  width: 100px; /* Adjust to desired size */
+  width: 100px;
   height: 100px;
   overflow: hidden;
   position: relative;
@@ -15,11 +15,6 @@
   width: 150%;
 }
 
-/* .grid-container {
-    display: grid;
-    gap: 16px;
-} */
-
 .grid-container {
   display: grid;
   gap: 2px;
@@ -32,7 +27,7 @@
 }
 
 .art-container {
-  width: 100px; /* Adjust to desired size */
+  width: 100px;
   height: 100px;
   overflow: hidden;
   position: relative;
@@ -42,7 +37,7 @@
 .results-container {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-around; /* distributes items evenly with the same space around them */
+  justify-content: space-around;
 }
 
 .layout-large-center {
