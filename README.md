@@ -2,7 +2,7 @@
 
 ## Description
 
-MTG Chart is a web application for Magic: The Gathering enthusiasts. It allows users to create and share charts and collages of their favorite MTG cards and decks. This interactive tool is perfect for showcasing powerful decks or your personal favorite cards.
+MTG Chart is a web application for Magic: The Gathering enthusiasts. It allows users to create and share charts and collages of their favourite MTG cards and decks. This interactive tool is perfect for showcasing powerful decks or your personal favourite cards.
 
 ## Features
 
@@ -42,8 +42,10 @@ To set up MTG Chart locally:
 
 1. **Clone the Repository**
 
+```
 git clone https://github.com/JakebGutierrez/mtg-chart.git
 cd mtg-chart
+```
 
 2. **Install Dependencies**
 
@@ -91,7 +93,7 @@ cd mtg-chart
 
 - **Responsive Web Design and Mobile Optimisation:** Adapting the interface for optimal viewing and interaction across a wide range of devices, including mobile phones and tablets.
 
-- **Advanced Sorting Features:** Implementing features like a shuffle button to randomise card arrangements, and options for sorting cards by color, type, or alphabetically, similar to organising a physical MTG deck.
+- **Advanced Sorting Features:** Implementing features like a shuffle button to randomise card arrangements, and options for sorting cards by colour, type, or alphabetically, similar to organising a physical MTG deck.
 
 ## License
 
