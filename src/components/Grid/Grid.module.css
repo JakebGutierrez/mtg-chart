@@ -9,15 +9,13 @@
 
 .canvas {
   background: var(--bg-base);
-  padding: 16px;
   border-radius: var(--radius-md);
-  /* Width drives cell sizing; cells use 1fr columns + aspect-ratio */
-  width: clamp(400px, 70vw, 900px);
+  /* padding and width are set as inline styles from chart config */
 }
 
 .grid {
   display: grid;
-  gap: 4px;
+  /* gap is set as an inline style from chart.cellGap */
 }
 
 .cell {

@@ -1,6 +1,6 @@
 import './App.css'
-import ControlPanel from './components/ControlPanel'
-import GridArea from './components/Grid'
+import ControlPanel from '@/components/ControlPanel'
+import GridArea from '@/components/Grid'
 
 function App() {
   return (
