@@ -27,13 +27,16 @@ export default function GridArea({ chart }: Props) {
             gap: chart.cellGap,
           }}
         >
-          {cellMap.map((_cell, i) => (
-            <div
-              key={i}
-              className={styles.cell}
-              style={{ borderRadius: chart.cornerRadius }}
-            />
-          ))}
+          {cellMap.map((cell) => {
+            if (cell.kind === 'covered') return null
+            return (
+              <div
+                key={cell.slotIndex}
+                className={styles.cell}
+                style={{ borderRadius: chart.cornerRadius }}
+              />
+            )
+          })}
         </div>
       </div>
     </main>

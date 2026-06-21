@@ -53,7 +53,10 @@ export default function ControlPanel({ chart }: Props) {
 
         <section className={styles.section}>
           <h2 className={styles.sectionLabel}>Names</h2>
-          <div className={styles.placeholder}>None · Sidebar · Overlay</div>
+          <div className={styles.row}>
+            <span className={styles.label}>Mode</span>
+            <span className={styles.value}>{chart.nameDisplayMode}</span>
+          </div>
         </section>
       </div>
 
