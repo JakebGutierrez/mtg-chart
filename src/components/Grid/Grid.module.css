@@ -1,0 +1,27 @@
+.area {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.canvas {
+  background: var(--bg-base);
+  padding: 16px;
+  border-radius: var(--radius-md);
+}
+
+.grid {
+  display: grid;
+  gap: 4px;
+}
+
+.cell {
+  width: 120px;
+  aspect-ratio: 4 / 3;
+  background: var(--bg-cell);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
