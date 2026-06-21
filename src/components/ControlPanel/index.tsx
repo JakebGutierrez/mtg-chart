@@ -1,7 +1,12 @@
+import type { Chart } from '@/types/chart'
 import SearchPanel from '@/components/SearchPanel'
 import styles from './ControlPanel.module.css'
 
-export default function ControlPanel() {
+interface Props {
+  chart: Chart
+}
+
+export default function ControlPanel({ chart }: Props) {
   return (
     <aside className={styles.panel}>
       <header className={styles.header}>
@@ -18,11 +23,11 @@ export default function ControlPanel() {
           <h2 className={styles.sectionLabel}>Grid</h2>
           <div className={styles.row}>
             <span className={styles.label}>Width</span>
-            <span className={styles.value}>5</span>
+            <span className={styles.value}>{chart.gridCols}</span>
           </div>
           <div className={styles.row}>
             <span className={styles.label}>Height</span>
-            <span className={styles.value}>5</span>
+            <span className={styles.value}>{chart.gridRows}</span>
           </div>
         </section>
 
@@ -30,19 +35,19 @@ export default function ControlPanel() {
           <h2 className={styles.sectionLabel}>Style</h2>
           <div className={styles.row}>
             <span className={styles.label}>Background</span>
-            <span className={styles.value}>#0b0c0e</span>
+            <span className={styles.value}>{chart.backgroundColor}</span>
           </div>
           <div className={styles.row}>
             <span className={styles.label}>Gap</span>
-            <span className={styles.value}>4px</span>
+            <span className={styles.value}>{chart.cellGap}px</span>
           </div>
           <div className={styles.row}>
             <span className={styles.label}>Padding</span>
-            <span className={styles.value}>16px</span>
+            <span className={styles.value}>{chart.padding}px</span>
           </div>
           <div className={styles.row}>
             <span className={styles.label}>Corner Radius</span>
-            <span className={styles.value}>4px</span>
+            <span className={styles.value}>{chart.cornerRadius}px</span>
           </div>
         </section>
 

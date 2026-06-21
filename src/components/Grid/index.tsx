@@ -1,28 +1,38 @@
+import type { Chart } from '@/types/chart'
+import { generateCellMap } from '@/utils/cellMap'
 import styles from './Grid.module.css'
 
-// Temporary demo constants — replaced by chart config in Phase 3
-const DEMO_ROWS = 5
-const DEMO_COLS = 5
-const DEMO_GAP = 4
-const DEMO_PADDING = 16
+interface Props {
+  chart: Chart
+}
 
-export default function GridArea() {
+export default function GridArea({ chart }: Props) {
+  const cellMap = generateCellMap(chart.gridRows, chart.gridCols)
+
   return (
     <main className={styles.area}>
       <div
         className={styles.canvas}
-        style={{ padding: DEMO_PADDING, width: 'clamp(400px, 70vw, 900px)' }}
+        style={{
+          padding: chart.padding,
+          background: chart.backgroundColor,
+          width: 'clamp(400px, 70vw, 900px)',
+        }}
       >
         <div
           className={styles.grid}
           style={{
-            gridTemplateRows: `repeat(${DEMO_ROWS}, 1fr)`,
-            gridTemplateColumns: `repeat(${DEMO_COLS}, 1fr)`,
-            gap: DEMO_GAP,
+            gridTemplateRows: `repeat(${chart.gridRows}, 1fr)`,
+            gridTemplateColumns: `repeat(${chart.gridCols}, 1fr)`,
+            gap: chart.cellGap,
           }}
         >
-          {Array.from({ length: DEMO_ROWS * DEMO_COLS }).map((_, i) => (
-            <div key={i} className={styles.cell} />
+          {cellMap.map((_cell, i) => (
+            <div
+              key={i}
+              className={styles.cell}
+              style={{ borderRadius: chart.cornerRadius }}
+            />
           ))}
         </div>
       </div>
