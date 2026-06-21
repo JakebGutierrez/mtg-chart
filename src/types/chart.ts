@@ -13,7 +13,7 @@ export interface Slot {
   selectedFaceIndex: 0 | 1
   imageUris: Array<{
     artCrop: string
-    normal: string
+    normal?: string   // absent on some unusual printings; stored for post-MVP export, not rendered
   }>
   // Post-MVP: manual crop framing (bump schemaVersion when added)
   cropX?: number   // 0–1 normalised horizontal offset, default 0.5

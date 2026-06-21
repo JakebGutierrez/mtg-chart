@@ -1,12 +1,13 @@
-import type { Chart } from '@/types/chart'
+import type { Chart, Slot } from '@/types/chart'
 import SearchPanel from '@/components/SearchPanel'
 import styles from './ControlPanel.module.css'
 
 interface Props {
   chart: Chart
+  onSlotFill: (slot: Slot) => void
 }
 
-export default function ControlPanel({ chart }: Props) {
+export default function ControlPanel({ chart, onSlotFill }: Props) {
   return (
     <aside className={styles.panel}>
       <header className={styles.header}>
@@ -16,7 +17,7 @@ export default function ControlPanel({ chart }: Props) {
       <div className={styles.body}>
         <section className={styles.section}>
           <h2 className={styles.sectionLabel}>Search</h2>
-          <SearchPanel />
+          <SearchPanel chart={chart} onSlotFill={onSlotFill} />
         </section>
 
         <section className={styles.section}>

@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import type { Chart } from '@/types/chart'
 import { generateCellMap } from '@/utils/cellMap'
+import { getSlot } from '@/utils/chart'
 import styles from './Grid.module.css'
 
 interface Props {
@@ -7,7 +9,10 @@ interface Props {
 }
 
 export default function GridArea({ chart }: Props) {
-  const cellMap = generateCellMap(chart.gridRows, chart.gridCols)
+  const cellMap = useMemo(
+    () => generateCellMap(chart.gridRows, chart.gridCols),
+    [chart.gridRows, chart.gridCols],
+  )
 
   return (
     <main className={styles.area}>
@@ -29,12 +34,20 @@ export default function GridArea({ chart }: Props) {
         >
           {cellMap.map((cell) => {
             if (cell.kind === 'covered') return null
+            const slot = getSlot(chart, cell.slotIndex)
             return (
               <div
                 key={cell.slotIndex}
                 className={styles.cell}
                 style={{ borderRadius: chart.cornerRadius }}
-              />
+              >
+                {slot && (
+                  <img
+                    src={slot.imageUris[slot.selectedFaceIndex].artCrop}
+                    alt={slot.cardName}
+                  />
+                )}
+              </div>
             )
           })}
         </div>
