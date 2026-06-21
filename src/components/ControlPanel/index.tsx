@@ -1,7 +1,4 @@
-import { useMemo } from 'react'
 import type { Chart, Slot } from '@/types/chart'
-import { generateCellMap } from '@/utils/cellMap'
-import { getSlot } from '@/utils/chart'
 import SearchPanel from '@/components/SearchPanel'
 import styles from './ControlPanel.module.css'
 
@@ -12,26 +9,7 @@ interface Props {
 }
 
 export default function ControlPanel({ chart, onSlotFill, onGridResize }: Props) {
-  const cellMap = useMemo(
-    () => generateCellMap(chart.gridRows, chart.gridCols),
-    [chart.gridRows, chart.gridCols],
-  )
-
-  const colShrinkBlocked =
-    chart.gridCols > 1 &&
-    cellMap.some((cell) => {
-      if (cell.kind === 'covered') return false
-      const slot = getSlot(chart, cell.slotIndex)
-      return slot !== null && cell.slotIndex % chart.gridCols === chart.gridCols - 1
-    })
-
-  const rowShrinkBlocked =
-    chart.gridRows > 1 &&
-    cellMap.some((cell) => {
-      if (cell.kind === 'covered') return false
-      const slot = getSlot(chart, cell.slotIndex)
-      return slot !== null && Math.floor(cell.slotIndex / chart.gridCols) === chart.gridRows - 1
-    })
+  const occupiedCount = chart.slots.filter((s) => s !== null).length
 
   return (
     <aside className={styles.panel}>
@@ -54,7 +32,7 @@ export default function ControlPanel({ chart, onSlotFill, onGridResize }: Props)
                 className={styles.stepperBtn}
                 type="button"
                 aria-label="Decrease columns"
-                disabled={chart.gridCols <= 1 || colShrinkBlocked}
+                disabled={chart.gridCols <= 1 || occupiedCount > chart.gridRows * (chart.gridCols - 1)}
                 onClick={() => onGridResize('cols', -1)}
               >
                 −
@@ -71,9 +49,6 @@ export default function ControlPanel({ chart, onSlotFill, onGridResize }: Props)
               </button>
             </div>
           </div>
-          {colShrinkBlocked && (
-            <p className={styles.shrinkWarning}>Remove cards in the last column first.</p>
-          )}
           <div className={styles.row}>
             <span className={styles.label}>Height</span>
             <div className={styles.stepper}>
@@ -81,7 +56,7 @@ export default function ControlPanel({ chart, onSlotFill, onGridResize }: Props)
                 className={styles.stepperBtn}
                 type="button"
                 aria-label="Decrease rows"
-                disabled={chart.gridRows <= 1 || rowShrinkBlocked}
+                disabled={chart.gridRows <= 1 || occupiedCount > (chart.gridRows - 1) * chart.gridCols}
                 onClick={() => onGridResize('rows', -1)}
               >
                 −
@@ -98,9 +73,6 @@ export default function ControlPanel({ chart, onSlotFill, onGridResize }: Props)
               </button>
             </div>
           </div>
-          {rowShrinkBlocked && (
-            <p className={styles.shrinkWarning}>Remove cards in the last row first.</p>
-          )}
         </section>
 
         <section className={styles.section}>

@@ -42,16 +42,13 @@ function App() {
         const newCols = dimension === 'cols' ? prev.gridCols + delta : prev.gridCols
         if (newRows < 1 || newRows > 10 || newCols < 1 || newCols > 10) return prev
         if (delta === -1) {
+          // Repack visible cards in row-major order into the new grid
           const cellMap = generateCellMap(prev.gridRows, prev.gridCols)
-          const blocked = cellMap.some((cell) => {
-            if (cell.kind === 'covered') return false
-            const slot = getSlot(prev, cell.slotIndex)
-            if (!slot) return false
-            const row = Math.floor(cell.slotIndex / prev.gridCols)
-            const col = cell.slotIndex % prev.gridCols
-            return row >= newRows || col >= newCols
-          })
-          if (blocked) return prev
+          const cards = cellMap
+            .filter((c): c is Exclude<CellDef, { kind: 'covered' }> => c.kind !== 'covered')
+            .map((c) => getSlot(prev, c.slotIndex))
+            .filter((s): s is Slot => s !== null)
+          return { ...prev, gridRows: newRows, gridCols: newCols, slots: cards }
         }
         return { ...prev, gridRows: newRows, gridCols: newCols }
       })
