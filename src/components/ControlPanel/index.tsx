@@ -1,3 +1,4 @@
+import SearchPanel from '@/components/SearchPanel'
 import styles from './ControlPanel.module.css'
 
 export default function ControlPanel() {
@@ -10,7 +11,7 @@ export default function ControlPanel() {
       <div className={styles.body}>
         <section className={styles.section}>
           <h2 className={styles.sectionLabel}>Search</h2>
-          <div className={styles.placeholder}>Search panel</div>
+          <SearchPanel />
         </section>
 
         <section className={styles.section}>

@@ -78,7 +78,7 @@
   width: 100%;
   padding: 8px 0;
   background: var(--accent);
-  color: #0b0c0e;
+  color: var(--bg-base);
   border: none;
   border-radius: var(--radius-sm);
   font-size: 13px;
