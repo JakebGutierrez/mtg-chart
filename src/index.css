@@ -12,6 +12,8 @@
   --panel-width: 260px;
   --radius-sm: 4px;
   --radius-md: 8px;
+  --overlay-bg: rgba(0, 0, 0, 0.65);
+  --overlay-bg-hover: rgba(0, 0, 0, 0.85);
 }
 
 *,

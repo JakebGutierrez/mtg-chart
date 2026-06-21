@@ -6,9 +6,10 @@ import styles from './Grid.module.css'
 
 interface Props {
   chart: Chart
+  onSlotClear: (slotIndex: number) => void
 }
 
-export default function GridArea({ chart }: Props) {
+export default function GridArea({ chart, onSlotClear }: Props) {
   const cellMap = useMemo(
     () => generateCellMap(chart.gridRows, chart.gridCols),
     [chart.gridRows, chart.gridCols],
@@ -42,10 +43,21 @@ export default function GridArea({ chart }: Props) {
                 style={{ borderRadius: chart.cornerRadius }}
               >
                 {slot && (
-                  <img
-                    src={slot.imageUris[slot.selectedFaceIndex].artCrop}
-                    alt={slot.cardName}
-                  />
+                  <>
+                    <img
+                      className={styles.cardImg}
+                      src={slot.imageUris[slot.selectedFaceIndex].artCrop}
+                      alt={slot.cardName}
+                    />
+                    <button
+                      className={styles.removeBtn}
+                      type="button"
+                      aria-label={`Remove ${slot.cardName}`}
+                      onClick={() => onSlotClear(cell.slotIndex)}
+                    >
+                      ×
+                    </button>
+                  </>
                 )}
               </div>
             )
