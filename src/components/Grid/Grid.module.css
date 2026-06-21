@@ -25,3 +25,10 @@
   overflow: hidden;
   min-width: 0;
 }
+
+.cell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

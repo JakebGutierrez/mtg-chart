@@ -44,7 +44,3 @@ export type CellDef =
   | { kind: 'covered' }
 
 export type CellMap = CellDef[]
-
-export function getSlot(chart: Chart, slotIndex: number): Slot | null {
-  return chart.slots[slotIndex] ?? null
-}
