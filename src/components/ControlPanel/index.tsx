@@ -1,14 +1,23 @@
-import type { Chart, Slot } from '@/types/chart'
+import type { Chart, Slot, NumericStyleField } from '@/types/chart'
 import SearchPanel from '@/components/SearchPanel'
+import Stepper from '@/components/Stepper'
 import styles from './ControlPanel.module.css'
 
 interface Props {
   chart: Chart
   onSlotFill: (slot: Slot) => void
   onGridResize: (dimension: 'rows' | 'cols', delta: 1 | -1) => void
+  onBgColorChange: (value: string) => void
+  onStyleStep: (field: NumericStyleField, delta: number) => void
 }
 
-export default function ControlPanel({ chart, onSlotFill, onGridResize }: Props) {
+export default function ControlPanel({
+  chart,
+  onSlotFill,
+  onGridResize,
+  onBgColorChange,
+  onStyleStep,
+}: Props) {
   const occupiedCount = chart.slots.filter((s) => s !== null).length
 
   return (
@@ -27,51 +36,33 @@ export default function ControlPanel({ chart, onSlotFill, onGridResize }: Props)
           <h2 className={styles.sectionLabel}>Grid</h2>
           <div className={styles.row}>
             <span className={styles.label}>Width</span>
-            <div className={styles.stepper}>
-              <button
-                className={styles.stepperBtn}
-                type="button"
-                aria-label="Decrease columns"
-                disabled={chart.gridCols <= 1 || occupiedCount > chart.gridRows * (chart.gridCols - 1)}
-                onClick={() => onGridResize('cols', -1)}
-              >
-                −
-              </button>
-              <span className={styles.stepperValue}>{chart.gridCols}</span>
-              <button
-                className={styles.stepperBtn}
-                type="button"
-                aria-label="Increase columns"
-                disabled={chart.gridCols >= 10}
-                onClick={() => onGridResize('cols', 1)}
-              >
-                +
-              </button>
-            </div>
+            <Stepper
+              value={chart.gridCols}
+              min={1}
+              max={10}
+              decrementLabel="Decrease columns"
+              incrementLabel="Increase columns"
+              decrementDisabled={
+                chart.gridCols <= 1 || occupiedCount > chart.gridRows * (chart.gridCols - 1)
+              }
+              onDecrement={() => onGridResize('cols', -1)}
+              onIncrement={() => onGridResize('cols', 1)}
+            />
           </div>
           <div className={styles.row}>
             <span className={styles.label}>Height</span>
-            <div className={styles.stepper}>
-              <button
-                className={styles.stepperBtn}
-                type="button"
-                aria-label="Decrease rows"
-                disabled={chart.gridRows <= 1 || occupiedCount > (chart.gridRows - 1) * chart.gridCols}
-                onClick={() => onGridResize('rows', -1)}
-              >
-                −
-              </button>
-              <span className={styles.stepperValue}>{chart.gridRows}</span>
-              <button
-                className={styles.stepperBtn}
-                type="button"
-                aria-label="Increase rows"
-                disabled={chart.gridRows >= 10}
-                onClick={() => onGridResize('rows', 1)}
-              >
-                +
-              </button>
-            </div>
+            <Stepper
+              value={chart.gridRows}
+              min={1}
+              max={10}
+              decrementLabel="Decrease rows"
+              incrementLabel="Increase rows"
+              decrementDisabled={
+                chart.gridRows <= 1 || occupiedCount > (chart.gridRows - 1) * chart.gridCols
+              }
+              onDecrement={() => onGridResize('rows', -1)}
+              onIncrement={() => onGridResize('rows', 1)}
+            />
           </div>
         </section>
 
@@ -79,19 +70,58 @@ export default function ControlPanel({ chart, onSlotFill, onGridResize }: Props)
           <h2 className={styles.sectionLabel}>Style</h2>
           <div className={styles.row}>
             <span className={styles.label}>Background</span>
-            <span className={styles.value}>{chart.backgroundColor}</span>
+            <label className={styles.colorControl}>
+              <span
+                className={styles.colorSwatch}
+                style={{ backgroundColor: chart.backgroundColor }}
+              />
+              <span className={styles.colorHex}>{chart.backgroundColor}</span>
+              <input
+                type="color"
+                className={styles.colorInput}
+                value={chart.backgroundColor}
+                onChange={(e) => onBgColorChange(e.target.value)}
+              />
+            </label>
           </div>
           <div className={styles.row}>
             <span className={styles.label}>Gap</span>
-            <span className={styles.value}>{chart.cellGap}px</span>
+            <Stepper
+              value={chart.cellGap}
+              min={0}
+              max={32}
+              unit="px"
+              decrementLabel="Decrease gap"
+              incrementLabel="Increase gap"
+              onDecrement={() => onStyleStep('cellGap', -2)}
+              onIncrement={() => onStyleStep('cellGap', 2)}
+            />
           </div>
           <div className={styles.row}>
             <span className={styles.label}>Padding</span>
-            <span className={styles.value}>{chart.padding}px</span>
+            <Stepper
+              value={chart.padding}
+              min={0}
+              max={64}
+              unit="px"
+              decrementLabel="Decrease padding"
+              incrementLabel="Increase padding"
+              onDecrement={() => onStyleStep('padding', -4)}
+              onIncrement={() => onStyleStep('padding', 4)}
+            />
           </div>
           <div className={styles.row}>
             <span className={styles.label}>Corner Radius</span>
-            <span className={styles.value}>{chart.cornerRadius}px</span>
+            <Stepper
+              value={chart.cornerRadius}
+              min={0}
+              max={32}
+              unit="px"
+              decrementLabel="Decrease corner radius"
+              incrementLabel="Increase corner radius"
+              onDecrement={() => onStyleStep('cornerRadius', -2)}
+              onIncrement={() => onStyleStep('cornerRadius', 2)}
+            />
           </div>
         </section>
 

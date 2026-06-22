@@ -1,4 +1,5 @@
 export type Layout = 'uniform' | 'hybrid'
+export type NumericStyleField = keyof Pick<Chart, 'cellGap' | 'padding' | 'cornerRadius'>
 export type DisplayMode = 'landscape' | 'square'
 export type NameDisplayMode = 'none' | 'sidebar' | 'overlay'
 

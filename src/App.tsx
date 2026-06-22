@@ -5,7 +5,13 @@ import GridArea from '@/components/Grid'
 import { createDefaultChart } from '@/utils/defaultChart'
 import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
-import type { Chart, Slot, CellDef } from '@/types/chart'
+import type { Chart, Slot, CellDef, NumericStyleField } from '@/types/chart'
+
+const STYLE_LIMITS: Record<NumericStyleField, [min: number, max: number]> = {
+  cellGap: [0, 32],
+  padding: [0, 64],
+  cornerRadius: [0, 32],
+}
 
 function App() {
   const [chart, setChart] = useState<Chart>(createDefaultChart)
@@ -56,12 +62,27 @@ function App() {
     [],
   )
 
+  const handleBgColorChange = useCallback((value: string) => {
+    setChart((prev) => ({ ...prev, backgroundColor: value }))
+  }, [])
+
+  const handleStyleStep = useCallback((field: NumericStyleField, delta: number) => {
+    setChart((prev) => {
+      const [min, max] = STYLE_LIMITS[field]
+      const next = (prev[field] as number) + delta
+      if (next < min || next > max) return prev
+      return { ...prev, [field]: next }
+    })
+  }, [])
+
   return (
     <div className="app">
       <ControlPanel
         chart={chart}
         onSlotFill={handleSlotFill}
         onGridResize={handleGridResize}
+        onBgColorChange={handleBgColorChange}
+        onStyleStep={handleStyleStep}
       />
       <GridArea chart={chart} onSlotClear={handleSlotClear} />
     </div>
