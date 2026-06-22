@@ -1,0 +1,45 @@
+.overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 6px 5px;
+  background: linear-gradient(transparent, var(--overlay-bg));
+  pointer-events: none;
+}
+
+.overlayText {
+  display: block;
+  font-size: 11px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px var(--shadow-text);
+}
+
+.sidebar {
+  display: grid;
+  /* grid-template-rows and gap set as inline styles */
+  min-width: 120px;
+  max-width: 200px;
+  flex-shrink: 0;
+}
+
+.sidebarRow {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.sidebarName {
+  color: var(--text-primary);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+}

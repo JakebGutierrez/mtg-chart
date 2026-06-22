@@ -5,7 +5,7 @@ import GridArea from '@/components/Grid'
 import { createDefaultChart } from '@/utils/defaultChart'
 import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
-import type { Chart, Slot, CellDef, NumericStyleField } from '@/types/chart'
+import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode } from '@/types/chart'
 
 const STYLE_LIMITS: Record<NumericStyleField, [min: number, max: number]> = {
   cellGap: [0, 32],
@@ -83,6 +83,14 @@ function App() {
     })
   }, [])
 
+  const handleTitleChange = useCallback((value: string) => {
+    setChart((prev) => ({ ...prev, title: value }))
+  }, [])
+
+  const handleNameDisplayChange = useCallback((mode: NameDisplayMode) => {
+    setChart((prev) => ({ ...prev, nameDisplayMode: mode }))
+  }, [])
+
   const handleFaceToggle = useCallback((slotIndex: number) => {
     setChart((prev) => {
       const slot = getSlot(prev, slotIndex)
@@ -104,6 +112,8 @@ function App() {
         onGridResize={handleGridResize}
         onBgColorChange={handleBgColorChange}
         onStyleStep={handleStyleStep}
+        onTitleChange={handleTitleChange}
+        onNameDisplayChange={handleNameDisplayChange}
       />
       <GridArea
         chart={chart}

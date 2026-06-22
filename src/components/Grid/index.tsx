@@ -5,6 +5,7 @@ import { getSlot } from '@/utils/chart'
 import { isMultiFaceLayout } from '@/utils/scryfall'
 import ContextMenu from '@/components/ContextMenu'
 import PrintingSwitcher from '@/components/PrintingSwitcher'
+import NameDisplay from '@/components/NameDisplay'
 import styles from './Grid.module.css'
 
 interface Props {
@@ -68,57 +69,69 @@ export default function GridArea({ chart, onSlotClear, onSlotUpdate, onFaceToggl
         style={{
           padding: chart.padding,
           background: chart.backgroundColor,
-          width: 'clamp(400px, 70vw, 900px)',
         }}
       >
+        {chart.title && <div className={styles.chartTitle}>{chart.title}</div>}
         <div
-          className={styles.grid}
-          style={{
-            gridTemplateRows: `repeat(${chart.gridRows}, 1fr)`,
-            gridTemplateColumns: `repeat(${chart.gridCols}, 1fr)`,
-            gap: chart.cellGap,
-          }}
+          className={styles.canvasBody}
+          style={{ gap: chart.nameDisplayMode === 'sidebar' ? 16 : undefined }}
         >
-          {cellMap.map((cell) => {
-            if (cell.kind === 'covered') return null
-            const slot = getSlot(chart, cell.slotIndex)
-            return (
-              <div
-                key={cell.slotIndex}
-                className={styles.cell}
-                style={{ borderRadius: chart.cornerRadius }}
-                onContextMenu={
-                  slot ? (e) => handleCellContextMenu(e, cell.slotIndex) : undefined
-                }
-              >
-                {slot && (
-                  <>
-                    <img
-                      className={styles.cardImg}
-                      src={slot.imageUris[slot.selectedFaceIndex].artCrop}
-                      alt={slot.cardName}
-                    />
-                    <button
-                      className={styles.removeBtn}
-                      type="button"
-                      aria-label={`Remove ${slot.cardName}`}
-                      onClick={() => onSlotClear(cell.slotIndex)}
-                    >
-                      ×
-                    </button>
-                    <button
-                      className={styles.printingBtn}
-                      type="button"
-                      aria-label={`Switch printing for ${slot.cardName}`}
-                      onClick={() => setPrintingFor(cell.slotIndex)}
-                    >
-                      ⇄
-                    </button>
-                  </>
-                )}
-              </div>
-            )
-          })}
+          <div
+            className={styles.grid}
+            style={{
+              gridTemplateRows: `repeat(${chart.gridRows}, 1fr)`,
+              gridTemplateColumns: `repeat(${chart.gridCols}, 1fr)`,
+              gap: chart.cellGap,
+              width: 'clamp(400px, 70vw, 900px)',
+            }}
+          >
+            {cellMap.map((cell) => {
+              if (cell.kind === 'covered') return null
+              const slot = getSlot(chart, cell.slotIndex)
+              return (
+                <div
+                  key={cell.slotIndex}
+                  className={styles.cell}
+                  style={{ borderRadius: chart.cornerRadius }}
+                  onContextMenu={
+                    slot ? (e) => handleCellContextMenu(e, cell.slotIndex) : undefined
+                  }
+                >
+                  {slot && (
+                    <>
+                      <img
+                        className={styles.cardImg}
+                        src={slot.imageUris[slot.selectedFaceIndex].artCrop}
+                        alt={slot.cardName}
+                      />
+                      {chart.nameDisplayMode === 'overlay' && (
+                        <NameDisplay mode="overlay" slot={slot} />
+                      )}
+                      <button
+                        className={styles.removeBtn}
+                        type="button"
+                        aria-label={`Remove ${slot.cardName}`}
+                        onClick={() => onSlotClear(cell.slotIndex)}
+                      >
+                        ×
+                      </button>
+                      <button
+                        className={styles.printingBtn}
+                        type="button"
+                        aria-label={`Switch printing for ${slot.cardName}`}
+                        onClick={() => setPrintingFor(cell.slotIndex)}
+                      >
+                        ⇄
+                      </button>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {chart.nameDisplayMode === 'sidebar' && (
+            <NameDisplay mode="sidebar" chart={chart} cellMap={cellMap} />
+          )}
         </div>
       </div>
 

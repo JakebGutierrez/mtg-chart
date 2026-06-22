@@ -1,4 +1,4 @@
-import type { Chart, Slot, NumericStyleField } from '@/types/chart'
+import type { Chart, Slot, NumericStyleField, NameDisplayMode } from '@/types/chart'
 import SearchPanel from '@/components/SearchPanel'
 import Stepper from '@/components/Stepper'
 import styles from './ControlPanel.module.css'
@@ -9,6 +9,8 @@ interface Props {
   onGridResize: (dimension: 'rows' | 'cols', delta: 1 | -1) => void
   onBgColorChange: (value: string) => void
   onStyleStep: (field: NumericStyleField, delta: number) => void
+  onTitleChange: (value: string) => void
+  onNameDisplayChange: (mode: NameDisplayMode) => void
 }
 
 export default function ControlPanel({
@@ -17,6 +19,8 @@ export default function ControlPanel({
   onGridResize,
   onBgColorChange,
   onStyleStep,
+  onTitleChange,
+  onNameDisplayChange,
 }: Props) {
   const occupiedCount = chart.slots.filter((s) => s !== null).length
 
@@ -126,10 +130,32 @@ export default function ControlPanel({
         </section>
 
         <section className={styles.section}>
+          <h2 className={styles.sectionLabel}>Title</h2>
+          <input
+            className={styles.titleInput}
+            type="text"
+            aria-label="Chart title"
+            placeholder="Chart title…"
+            value={chart.title}
+            onChange={(e) => onTitleChange(e.target.value)}
+          />
+        </section>
+
+        <section className={styles.section}>
           <h2 className={styles.sectionLabel}>Names</h2>
-          <div className={styles.row}>
-            <span className={styles.label}>Mode</span>
-            <span className={styles.value}>{chart.nameDisplayMode}</span>
+          <div className={styles.segmented} role="radiogroup" aria-label="Name display mode">
+            {(['none', 'overlay', 'sidebar'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                role="radio"
+                aria-checked={chart.nameDisplayMode === mode}
+                className={`${styles.segBtn}${chart.nameDisplayMode === mode ? ` ${styles.segBtnActive}` : ''}`}
+                onClick={() => onNameDisplayChange(mode)}
+              >
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+              </button>
+            ))}
           </div>
         </section>
       </div>

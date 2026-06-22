@@ -16,6 +16,7 @@
   --overlay-bg-hover: rgba(0, 0, 0, 0.85);
   --overlay-backdrop: rgba(0, 0, 0, 0.7);
   --overlay-shadow: rgba(0, 0, 0, 0.5);
+  --shadow-text: rgba(0, 0, 0, 0.9);
   --radius-xs: 2px;
 }
 
