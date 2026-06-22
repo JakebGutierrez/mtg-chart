@@ -2,9 +2,26 @@ import type { Slot } from '@/types/chart'
 
 const API_BASE = 'https://api.scryfall.com'
 
+const MULTI_FACE_LAYOUTS = new Set([
+  'transform',
+  'modal_dfc',
+  'double_faced_token',
+  'art_series',
+  'reversible_card',
+])
+
+export function isMultiFaceLayout(layout: string): boolean {
+  return MULTI_FACE_LAYOUTS.has(layout)
+}
+
 export function buildSearchUrl(query: string): string {
   const q = `${query} lang:en -is:digital -t:token -t:emblem`
   return `${API_BASE}/cards/search?q=${encodeURIComponent(q)}`
+}
+
+export function buildPrintingsUrl(oracleId: string): string {
+  const q = `oracleId:${oracleId} lang:en -is:digital`
+  return `${API_BASE}/cards/search?q=${encodeURIComponent(q)}&unique=prints`
 }
 
 interface ScryfallImageUris {
@@ -22,6 +39,8 @@ interface ScryfallCard {
   oracle_id: string
   name: string
   set: string
+  set_name: string
+  released_at: string
   collector_number: string
   layout: string
   image_uris?: ScryfallImageUris
@@ -32,6 +51,12 @@ export interface ScryfallSearchResponse {
   data: ScryfallCard[]
   has_more: boolean
   total_cards: number
+}
+
+export interface PrintingMeta {
+  slot: Slot
+  setName: string
+  year: number
 }
 
 export function normaliseCard(card: ScryfallCard): Slot | null {
@@ -74,6 +99,16 @@ export function normaliseCard(card: ScryfallCard): Slot | null {
     layout: card.layout,
     selectedFaceIndex: 0,
     imageUris: [{ artCrop: card.image_uris.art_crop, normal: card.image_uris.normal }],
+  }
+}
+
+export function normalisePrinting(card: ScryfallCard): PrintingMeta | null {
+  const slot = normaliseCard(card)
+  if (!slot) return null
+  return {
+    slot,
+    setName: card.set_name,
+    year: new Date(card.released_at).getFullYear(),
   }
 }
 

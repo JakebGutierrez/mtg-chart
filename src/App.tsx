@@ -75,6 +75,27 @@ function App() {
     })
   }, [])
 
+  const handleSlotUpdate = useCallback((slotIndex: number, updated: Slot) => {
+    setChart((prev) => {
+      const slots = [...prev.slots]
+      slots[slotIndex] = updated
+      return { ...prev, slots }
+    })
+  }, [])
+
+  const handleFaceToggle = useCallback((slotIndex: number) => {
+    setChart((prev) => {
+      const slot = getSlot(prev, slotIndex)
+      if (!slot || slot.imageUris.length <= 1) return prev
+      const slots = [...prev.slots]
+      slots[slotIndex] = {
+        ...slot,
+        selectedFaceIndex: (slot.selectedFaceIndex === 0 ? 1 : 0) as 0 | 1,
+      }
+      return { ...prev, slots }
+    })
+  }, [])
+
   return (
     <div className="app">
       <ControlPanel
@@ -84,7 +105,12 @@ function App() {
         onBgColorChange={handleBgColorChange}
         onStyleStep={handleStyleStep}
       />
-      <GridArea chart={chart} onSlotClear={handleSlotClear} />
+      <GridArea
+        chart={chart}
+        onSlotClear={handleSlotClear}
+        onSlotUpdate={handleSlotUpdate}
+        onFaceToggle={handleFaceToggle}
+      />
     </div>
   )
 }

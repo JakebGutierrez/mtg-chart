@@ -14,6 +14,9 @@
   --radius-md: 8px;
   --overlay-bg: rgba(0, 0, 0, 0.65);
   --overlay-bg-hover: rgba(0, 0, 0, 0.85);
+  --overlay-backdrop: rgba(0, 0, 0, 0.7);
+  --overlay-shadow: rgba(0, 0, 0, 0.5);
+  --radius-xs: 2px;
 }
 
 *,
