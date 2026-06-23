@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import type { Chart, Slot, NumericStyleField, NameDisplayMode } from '@/types/chart'
 import type { ExportScale } from '@/hooks/useExport'
 import SearchPanel from '@/components/SearchPanel'
@@ -6,26 +7,136 @@ import styles from './ControlPanel.module.css'
 
 interface Props {
   chart: Chart
+  charts: Chart[]
+  activeId: string
   onSlotFill: (slot: Slot) => void
   onGridResize: (dimension: 'rows' | 'cols', delta: 1 | -1) => void
   onBgColorChange: (value: string) => void
   onStyleStep: (field: NumericStyleField, delta: number) => void
   onTitleChange: (value: string) => void
   onNameDisplayChange: (mode: NameDisplayMode) => void
+  onSelectChart: (id: string) => void
+  onCreateChart: () => void
+  onDeleteChart: (id: string) => void
+  onRenameChart: (id: string, name: string) => void
   exporting: boolean
   exportScale: ExportScale
   onScaleChange: (s: ExportScale) => void
   onExport: () => void
 }
 
+function ChartPicker({
+  charts,
+  activeId,
+  onSelectChart,
+  onCreateChart,
+  onDeleteChart,
+  onRenameChart,
+}: Pick<Props, 'charts' | 'activeId' | 'onSelectChart' | 'onCreateChart' | 'onDeleteChart' | 'onRenameChart'>) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draftName, setDraftName] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editingId])
+
+  function startEditing(chart: Chart) {
+    setEditingId(chart.id)
+    setDraftName(chart.name)
+  }
+
+  function commitEdit(id: string) {
+    const trimmed = draftName.trim()
+    if (trimmed) onRenameChart(id, trimmed)
+    setEditingId(null)
+  }
+
+  return (
+    <section className={styles.section}>
+      <div className={styles.pickerHeader}>
+        <h2 className={styles.sectionLabel}>Charts</h2>
+        <button
+          className={styles.pickerAdd}
+          type="button"
+          aria-label="New chart"
+          onClick={onCreateChart}
+        >
+          +
+        </button>
+      </div>
+      <ul className={styles.pickerList}>
+        {charts.map((c) => {
+          const isActive = c.id === activeId
+          const isEditing = editingId === c.id
+          return (
+            <li
+              key={c.id}
+              className={`${styles.pickerItem}${isActive ? ` ${styles.pickerItemActive}` : ''}`}
+            >
+              {isEditing ? (
+                <input
+                  ref={inputRef}
+                  className={styles.pickerNameInput}
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onBlur={() => commitEdit(c.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitEdit(c.id)
+                    if (e.key === 'Escape') setEditingId(null)
+                  }}
+                />
+              ) : (
+                <button
+                  className={styles.pickerName}
+                  type="button"
+                  onClick={() => {
+                    if (isActive) {
+                      startEditing(c)
+                    } else {
+                      onSelectChart(c.id)
+                    }
+                  }}
+                  title={isActive ? 'Click to rename' : c.name}
+                >
+                  {c.name}
+                </button>
+              )}
+              {charts.length > 1 && (
+                <button
+                  className={styles.pickerDelete}
+                  type="button"
+                  aria-label={`Delete ${c.name}`}
+                  onClick={() => onDeleteChart(c.id)}
+                >
+                  ×
+                </button>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
 export default function ControlPanel({
   chart,
+  charts,
+  activeId,
   onSlotFill,
   onGridResize,
   onBgColorChange,
   onStyleStep,
   onTitleChange,
   onNameDisplayChange,
+  onSelectChart,
+  onCreateChart,
+  onDeleteChart,
+  onRenameChart,
   exporting,
   exportScale,
   onScaleChange,
@@ -40,6 +151,15 @@ export default function ControlPanel({
       </header>
 
       <div className={styles.body}>
+        <ChartPicker
+          charts={charts}
+          activeId={activeId}
+          onSelectChart={onSelectChart}
+          onCreateChart={onCreateChart}
+          onDeleteChart={onDeleteChart}
+          onRenameChart={onRenameChart}
+        />
+
         <section className={styles.section}>
           <h2 className={styles.sectionLabel}>Search</h2>
           <SearchPanel chart={chart} onSlotFill={onSlotFill} />

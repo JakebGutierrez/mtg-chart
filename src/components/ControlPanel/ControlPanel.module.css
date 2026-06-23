@@ -37,6 +37,139 @@
   border-bottom: none;
 }
 
+/* Chart picker */
+.pickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.pickerHeader .sectionLabel {
+  margin-bottom: 0;
+}
+
+.pickerAdd {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.pickerAdd:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pickerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pickerItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  transition: background 0.1s;
+}
+
+.pickerItem:hover {
+  background: var(--bg-hover);
+}
+
+.pickerItemActive {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.pickerItemActive:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.pickerName {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  padding: 3px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s;
+}
+
+.pickerItemActive .pickerName {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pickerName:hover {
+  color: var(--text-primary);
+}
+
+.pickerItemActive .pickerName:hover {
+  color: var(--accent);
+}
+
+.pickerNameInput {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  background: var(--bg-base);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.pickerDelete {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  transition: color 0.15s, background 0.15s;
+  opacity: 0;
+}
+
+.pickerItem:hover .pickerDelete {
+  opacity: 1;
+}
+
+.pickerDelete:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
 .sectionLabel {
   font-size: 10px;
   font-weight: 600;
