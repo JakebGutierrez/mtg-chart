@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
-import type { Chart, Slot, NumericStyleField, NameDisplayMode } from '@/types/chart'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import type { Chart, Slot, NumericStyleField, NameDisplayMode, DisplayMode } from '@/types/chart'
 import type { ExportScale } from '@/hooks/useExport'
 import SearchPanel from '@/components/SearchPanel'
 import Stepper from '@/components/Stepper'
 import styles from './ControlPanel.module.css'
+
+type CropValues = { cropX: number; cropY: number; cropScale: number }
 
 interface Props {
   chart: Chart
@@ -15,6 +17,7 @@ interface Props {
   onStyleStep: (field: NumericStyleField, delta: number) => void
   onTitleChange: (value: string) => void
   onNameDisplayChange: (mode: NameDisplayMode) => void
+  onDisplayModeChange: (mode: DisplayMode) => void
   onSelectChart: (id: string) => void
   onCreateChart: () => void
   onDeleteChart: (id: string) => void
@@ -27,6 +30,10 @@ interface Props {
   exportScale: ExportScale
   onScaleChange: (s: ExportScale) => void
   onExport: () => void
+  selectedSlot: Slot | null
+  onCropDragBegin: () => void
+  onCropLive: (crop: CropValues) => void
+  onCropChange: (crop: CropValues) => void
 }
 
 function ChartPicker({
@@ -127,6 +134,122 @@ function ChartPicker({
   )
 }
 
+function CropEditor({
+  slot,
+  displayMode,
+  onCropDragBegin,
+  onCropLive,
+  onCropChange,
+}: {
+  slot: Slot
+  displayMode: DisplayMode
+  onCropDragBegin: () => void
+  onCropLive: (crop: CropValues) => void
+  onCropChange: (crop: CropValues) => void
+}) {
+  const previewRef = useRef<HTMLDivElement>(null)
+  const dragStateRef = useRef<{ startX: number; startY: number; cropX: number; cropY: number } | null>(null)
+  const moveListenerRef = useRef<((e: MouseEvent) => void) | null>(null)
+  const upListenerRef = useRef<((e: MouseEvent) => void) | null>(null)
+
+  // Remove any active window listeners if the editor unmounts mid-drag (e.g. selected
+  // slot is cleared while the mouse button is still held down).
+  useEffect(() => () => {
+    if (moveListenerRef.current) window.removeEventListener('mousemove', moveListenerRef.current)
+    if (upListenerRef.current) window.removeEventListener('mouseup', upListenerRef.current)
+  }, [])
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    dragStateRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      cropX: slot.cropX,
+      cropY: slot.cropY,
+    }
+    // begun gates the history push so a click-without-move doesn't create a phantom
+    // undo entry. onCropDragBegin is called only on the first actual movement.
+    let begun = false
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!dragStateRef.current || !previewRef.current) return
+      if (!begun) {
+        begun = true
+        onCropDragBegin()
+      }
+      const rect = previewRef.current.getBoundingClientRect()
+      // Dragging right → image moves right → cropX decreases (reveal left side)
+      const dx = (ev.clientX - dragStateRef.current.startX) / rect.width
+      const dy = (ev.clientY - dragStateRef.current.startY) / rect.height
+      const newCropX = Math.max(0, Math.min(1, dragStateRef.current.cropX - dx))
+      const newCropY = Math.max(0, Math.min(1, dragStateRef.current.cropY - dy))
+      onCropLive({ cropX: newCropX, cropY: newCropY, cropScale: slot.cropScale })
+    }
+
+    const handleMouseUp = () => {
+      dragStateRef.current = null
+      moveListenerRef.current = null
+      upListenerRef.current = null
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    moveListenerRef.current = handleMouseMove
+    upListenerRef.current = handleMouseUp
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+  }, [slot.cropX, slot.cropY, slot.cropScale, onCropDragBegin, onCropLive])
+
+  const aspectRatio = displayMode === 'square' ? '1 / 1' : '4 / 3'
+
+  return (
+    <div>
+      <div
+        ref={previewRef}
+        className={styles.cropPreview}
+        style={{ aspectRatio }}
+        onMouseDown={handleMouseDown}
+      >
+        <img
+          className={styles.cropPreviewImg}
+          src={slot.imageUris[slot.selectedFaceIndex].artCrop}
+          alt={slot.cardName}
+          draggable={false}
+          style={{
+            objectPosition: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
+            ...(slot.cropScale !== 1.0 && {
+              transform: `scale(${slot.cropScale})`,
+              transformOrigin: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
+            }),
+          }}
+        />
+      </div>
+      <div className={styles.cropRow}>
+        <span className={styles.label}>Zoom</span>
+        <input
+          type="range"
+          className={styles.cropZoomSlider}
+          min={1.0}
+          max={3.0}
+          step={0.05}
+          value={slot.cropScale}
+          onChange={(e) =>
+            onCropChange({ cropX: slot.cropX, cropY: slot.cropY, cropScale: Number(e.target.value) })
+          }
+        />
+        <span className={styles.value}>{slot.cropScale.toFixed(2)}×</span>
+      </div>
+      <button
+        type="button"
+        className={styles.cropResetBtn}
+        onClick={() => onCropChange({ cropX: 0.5, cropY: 0.5, cropScale: 1.0 })}
+      >
+        Reset
+      </button>
+    </div>
+  )
+}
+
 export default function ControlPanel({
   chart,
   charts,
@@ -137,6 +260,7 @@ export default function ControlPanel({
   onStyleStep,
   onTitleChange,
   onNameDisplayChange,
+  onDisplayModeChange,
   onSelectChart,
   onCreateChart,
   onDeleteChart,
@@ -149,6 +273,10 @@ export default function ControlPanel({
   exportScale,
   onScaleChange,
   onExport,
+  selectedSlot,
+  onCropDragBegin,
+  onCropLive,
+  onCropChange,
 }: Props) {
   const occupiedCount = chart.slots.filter((s) => s != null).length
 
@@ -172,6 +300,19 @@ export default function ControlPanel({
           <h2 className={styles.sectionLabel}>Search</h2>
           <SearchPanel chart={chart} onSlotFill={onSlotFill} />
         </section>
+
+        {selectedSlot && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionLabel}>Crop — {selectedSlot.cardName}</h2>
+            <CropEditor
+              slot={selectedSlot}
+              displayMode={chart.displayMode}
+              onCropDragBegin={onCropDragBegin}
+              onCropLive={onCropLive}
+              onCropChange={onCropChange}
+            />
+          </section>
+        )}
 
         <section className={styles.section}>
           <h2 className={styles.sectionLabel}>Grid</h2>
@@ -209,6 +350,23 @@ export default function ControlPanel({
 
         <section className={styles.section}>
           <h2 className={styles.sectionLabel}>Style</h2>
+          <div className={styles.row}>
+            <span className={styles.label}>Mode</span>
+            <div className={styles.segmented} role="radiogroup" aria-label="Display mode">
+              {(['landscape', 'square'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="radio"
+                  aria-checked={chart.displayMode === mode}
+                  className={`${styles.segBtn}${chart.displayMode === mode ? ` ${styles.segBtnActive}` : ''}`}
+                  onClick={() => onDisplayModeChange(mode)}
+                >
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className={styles.row}>
             <span className={styles.label}>Background</span>
             <label className={styles.colorControl}>

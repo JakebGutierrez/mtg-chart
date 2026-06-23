@@ -16,10 +16,9 @@ export interface Slot {
     artCrop: string
     normal?: string   // absent on some unusual printings; stored for post-MVP export, not rendered
   }>
-  // Post-MVP: manual crop framing (bump schemaVersion when added)
-  cropX?: number   // 0–1 normalised horizontal offset, default 0.5
-  cropY?: number   // 0–1 normalised vertical offset, default 0.5
-  cropScale?: number // 1.0 = fit; >1 = zoom in, default 1.0
+  cropX: number      // 0–1 normalised horizontal offset, default 0.5
+  cropY: number      // 0–1 normalised vertical offset, default 0.5
+  cropScale: number  // 1.0 = fit; >1 = zoom in, default 1.0
 }
 
 export interface Chart {

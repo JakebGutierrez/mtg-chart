@@ -81,6 +81,9 @@ export function normaliseCard(card: ScryfallCard): Slot | null {
           artCrop: f.image_uris!.art_crop!,
           normal: f.image_uris!.normal,
         })),
+        cropX: 0.5,
+        cropY: 0.5,
+        cropScale: 1.0,
       }
     }
     // card_faces present but no per-face image_uris (adventure, split, etc.) — fall through
@@ -99,6 +102,9 @@ export function normaliseCard(card: ScryfallCard): Slot | null {
     layout: card.layout,
     selectedFaceIndex: 0,
     imageUris: [{ artCrop: card.image_uris.art_crop, normal: card.image_uris.normal }],
+    cropX: 0.5,
+    cropY: 0.5,
+    cropScale: 1.0,
   }
 }
 

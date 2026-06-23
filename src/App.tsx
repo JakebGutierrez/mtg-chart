@@ -6,7 +6,7 @@ import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
 import { useExport } from '@/hooks/useExport'
 import { useCharts } from '@/hooks/useCharts'
-import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode } from '@/types/chart'
+import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode } from '@/types/chart'
 
 const STYLE_LIMITS: Record<NumericStyleField, [min: number, max: number]> = {
   cellGap: [0, 32],
@@ -18,6 +18,8 @@ interface History {
   past: Chart[]
   future: Chart[]
 }
+
+type CropValues = { cropX: number; cropY: number; cropScale: number }
 
 function App() {
   const { charts, activeId, activeChart, createChart, deleteChart, updateChart, renameChart, setActiveId } =
@@ -48,11 +50,14 @@ function App() {
     [updateChart, activeChart],
   )
 
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null)
+
   // History resets synchronously when switching charts so canUndo/canRedo are
   // immediately correct for the newly active chart.
   const handleSelectChart = useCallback(
     (id: string) => {
       setHistory({ past: [], future: [] })
+      setSelectedSlotIndex(null)
       setActiveId(id)
     },
     [setActiveId],
@@ -60,12 +65,16 @@ function App() {
 
   const handleCreateChart = useCallback(() => {
     setHistory({ past: [], future: [] })
+    setSelectedSlotIndex(null)
     createChart()
   }, [createChart])
 
   const handleDeleteChart = useCallback(
     (id: string) => {
-      if (id === activeId) setHistory({ past: [], future: [] })
+      if (id === activeId) {
+        setHistory({ past: [], future: [] })
+        setSelectedSlotIndex(null)
+      }
       deleteChart(id)
     },
     [activeId, deleteChart],
@@ -78,6 +87,7 @@ function App() {
       past: h.past.slice(0, -1),
       future: [activeChart, ...h.future.slice(0, 49)],
     }))
+    setSelectedSlotIndex(null)
     updateChart(() => snapshot)
   }, [history, activeChart, updateChart])
 
@@ -88,6 +98,7 @@ function App() {
       past: [...h.past.slice(-49), activeChart],
       future: h.future.slice(1),
     }))
+    setSelectedSlotIndex(null)
     updateChart(() => snapshot)
   }, [history, activeChart, updateChart])
 
@@ -136,17 +147,21 @@ function App() {
 
   const handleSlotClear = useCallback(
     (slotIndex: number) => {
+      if (slotIndex === selectedSlotIndex) setSelectedSlotIndex(null)
       updateChartWithHistory((prev) => {
         const slots = [...prev.slots]
         slots[slotIndex] = null
         return { ...prev, slots }
       })
     },
-    [updateChartWithHistory],
+    [updateChartWithHistory, selectedSlotIndex],
   )
 
   const handleSlotMove = useCallback(
     (from: number, to: number) => {
+      // Keep the crop selection tracking the card that moved, not the index it left.
+      if (selectedSlotIndex === from) setSelectedSlotIndex(to)
+      else if (selectedSlotIndex === to) setSelectedSlotIndex(from)
       updateChartWithHistory((prev) => {
         if (from === to) return prev
         const slots = [...prev.slots]
@@ -155,11 +170,14 @@ function App() {
         return { ...prev, slots }
       })
     },
-    [updateChartWithHistory],
+    [updateChartWithHistory, selectedSlotIndex],
   )
 
   const handleGridResize = useCallback(
     (dimension: 'rows' | 'cols', delta: 1 | -1) => {
+      // Shrink recompacts slots into a new dense array, making any selectedSlotIndex
+      // stale (it may now point to a different card or out-of-bounds). Clear it.
+      if (delta === -1) setSelectedSlotIndex(null)
       updateChartWithHistory((prev) => {
         const newRows = dimension === 'rows' ? prev.gridRows + delta : prev.gridRows
         const newCols = dimension === 'cols' ? prev.gridCols + delta : prev.gridCols
@@ -222,6 +240,13 @@ function App() {
     [updateChartWithHistory],
   )
 
+  const handleDisplayModeChange = useCallback(
+    (mode: DisplayMode) => {
+      updateChartWithHistory((prev) => ({ ...prev, displayMode: mode }))
+    },
+    [updateChartWithHistory],
+  )
+
   const handleFaceToggle = useCallback(
     (slotIndex: number) => {
       updateChartWithHistory((prev) => {
@@ -238,6 +263,49 @@ function App() {
     [updateChartWithHistory],
   )
 
+  const handleCellSelect = useCallback((slotIndex: number | null) => {
+    setSelectedSlotIndex(slotIndex)
+  }, [])
+
+  // Crop drag: push the pre-drag chart to history once on mousedown, then
+  // apply live updates without history during the drag. This gives a single
+  // undo step that reverts the entire drag, not one step per pixel moved.
+  const handleCropDragBegin = useCallback(() => {
+    setHistory((h) => ({
+      past: [...h.past.slice(-49), activeChart],
+      future: [],
+    }))
+  }, [activeChart])
+
+  const handleCropLive = useCallback(
+    (crop: CropValues) => {
+      if (selectedSlotIndex === null) return
+      updateChart((prev) => {
+        const slot = getSlot(prev, selectedSlotIndex)
+        if (!slot) return prev
+        const slots = [...prev.slots]
+        slots[selectedSlotIndex] = { ...slot, ...crop }
+        return { ...prev, slots }
+      })
+    },
+    [updateChart, selectedSlotIndex],
+  )
+
+  // Used for discrete crop changes (zoom slider, reset) — each gets its own undo entry.
+  const handleCropChange = useCallback(
+    (crop: CropValues) => {
+      if (selectedSlotIndex === null) return
+      updateChartWithHistory((prev) => {
+        const slot = getSlot(prev, selectedSlotIndex)
+        if (!slot) return prev
+        const slots = [...prev.slots]
+        slots[selectedSlotIndex] = { ...slot, ...crop }
+        return { ...prev, slots }
+      })
+    },
+    [updateChartWithHistory, selectedSlotIndex],
+  )
+
   // NOT history-tracked: transparent image URI cache refresh on 404 during export.
   const handleSlotImageUpdate = useCallback(
     (slotIndex: number, imageUris: Slot['imageUris']) => {
@@ -251,6 +319,9 @@ function App() {
     },
     [updateChart],
   )
+
+  const selectedSlot =
+    selectedSlotIndex !== null ? (getSlot(activeChart, selectedSlotIndex) ?? null) : null
 
   const gridRef = useRef<HTMLDivElement>(null)
   const {
@@ -276,6 +347,7 @@ function App() {
         onStyleStep={handleStyleStep}
         onTitleChange={handleTitleChange}
         onNameDisplayChange={handleNameDisplayChange}
+        onDisplayModeChange={handleDisplayModeChange}
         onSelectChart={handleSelectChart}
         onCreateChart={handleCreateChart}
         onDeleteChart={handleDeleteChart}
@@ -288,6 +360,10 @@ function App() {
         exportScale={exportScale}
         onScaleChange={setExportScale}
         onExport={triggerExport}
+        selectedSlot={selectedSlot}
+        onCropDragBegin={handleCropDragBegin}
+        onCropLive={handleCropLive}
+        onCropChange={handleCropChange}
       />
       <GridArea
         chart={activeChart}
@@ -295,6 +371,8 @@ function App() {
         onSlotUpdate={handleSlotUpdate}
         onSlotMove={handleSlotMove}
         onFaceToggle={handleFaceToggle}
+        selectedSlotIndex={selectedSlotIndex}
+        onCellSelect={handleCellSelect}
         gridRef={gridRef}
         exportError={exportError}
         exportWarning={exportWarning}

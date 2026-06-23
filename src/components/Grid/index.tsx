@@ -14,6 +14,8 @@ interface Props {
   onSlotUpdate: (slotIndex: number, updated: Slot) => void
   onSlotMove: (from: number, to: number) => void
   onFaceToggle: (slotIndex: number) => void
+  selectedSlotIndex: number | null
+  onCellSelect: (slotIndex: number | null) => void
   gridRef: RefObject<HTMLDivElement | null>
   exportError: string | null
   exportWarning: string | null
@@ -27,6 +29,8 @@ export default function GridArea({
   onSlotUpdate,
   onSlotMove,
   onFaceToggle,
+  selectedSlotIndex,
+  onCellSelect,
   gridRef,
   exportError,
   exportWarning,
@@ -82,6 +86,8 @@ export default function GridArea({
   const contextMenuSlot = contextMenu !== null ? getSlot(chart, contextMenu.slotIndex) : null
   const printingSlot = printingFor !== null ? getSlot(chart, printingFor) : null
 
+  const isSquare = chart.displayMode === 'square'
+
   return (
     <main className={styles.area}>
       <div className={styles.canvasGroup}>
@@ -131,10 +137,21 @@ export default function GridArea({
             {cellMap.map((cell) => {
               if (cell.kind === 'covered') return null
               const slot = getSlot(chart, cell.slotIndex)
+              const isSelected = cell.slotIndex === selectedSlotIndex
+
+              const cellClass = [
+                styles.cell,
+                isSquare ? styles.cellSquare : '',
+                dragOver === cell.slotIndex ? styles.cellDragOver : '',
+                isSelected ? styles.cellSelected : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
+
               return (
                 <div
                   key={cell.slotIndex}
-                  className={`${styles.cell}${dragOver === cell.slotIndex ? ` ${styles.cellDragOver}` : ''}`}
+                  className={cellClass}
                   style={{ borderRadius: chart.cornerRadius }}
                   onContextMenu={
                     slot ? (e) => handleCellContextMenu(e, cell.slotIndex) : undefined
@@ -154,6 +171,7 @@ export default function GridArea({
                     dragFromRef.current = null
                   }}
                   onDragEnd={() => { dragFromRef.current = null; setDragOver(null) }}
+                  onClick={() => onCellSelect(slot ? cell.slotIndex : null)}
                 >
                   {slot && (
                     <>
@@ -161,6 +179,13 @@ export default function GridArea({
                         className={styles.cardImg}
                         src={slot.imageUris[slot.selectedFaceIndex].artCrop}
                         alt={slot.cardName}
+                        style={{
+                          objectPosition: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
+                          ...(slot.cropScale !== 1.0 && {
+                            transform: `scale(${slot.cropScale})`,
+                            transformOrigin: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
+                          }),
+                        }}
                       />
                       {chart.nameDisplayMode === 'overlay' && (
                         <NameDisplay mode="overlay" slot={slot} />
@@ -169,7 +194,7 @@ export default function GridArea({
                         className={styles.removeBtn}
                         type="button"
                         aria-label={`Remove ${slot.cardName}`}
-                        onClick={() => onSlotClear(cell.slotIndex)}
+                        onClick={(e) => { e.stopPropagation(); onSlotClear(cell.slotIndex) }}
                       >
                         ×
                       </button>
@@ -177,7 +202,7 @@ export default function GridArea({
                         className={styles.printingBtn}
                         type="button"
                         aria-label={`Switch printing for ${slot.cardName}`}
-                        onClick={() => setPrintingFor(cell.slotIndex)}
+                        onClick={(e) => { e.stopPropagation(); setPrintingFor(cell.slotIndex) }}
                       >
                         ⇄
                       </button>

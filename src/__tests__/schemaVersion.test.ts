@@ -1,12 +1,30 @@
 import { describe, it, expect, vi } from 'vitest'
 import { migrateAll } from '@/utils/schemaVersion'
-import type { Chart } from '@/types/chart'
+import type { Chart, Slot } from '@/types/chart'
+
+function makeSlot(overrides: Partial<Slot> = {}): Slot {
+  return {
+    kind: 'scryfall',
+    scryfallId: 'abc',
+    oracleId: 'xyz',
+    cardName: 'Test Card',
+    setCode: 'tst',
+    collectorNumber: '1',
+    layout: 'normal',
+    selectedFaceIndex: 0,
+    imageUris: [{ artCrop: 'https://example.com/art.jpg' }],
+    cropX: 0.5,
+    cropY: 0.5,
+    cropScale: 1.0,
+    ...overrides,
+  }
+}
 
 function makeChart(overrides: Partial<Chart> = {}): Chart {
   return {
     id: 'test-id',
     name: 'Test',
-    schemaVersion: 1,
+    schemaVersion: 2,
     gridRows: 3,
     gridCols: 3,
     layout: 'uniform',
@@ -23,10 +41,10 @@ function makeChart(overrides: Partial<Chart> = {}): Chart {
 }
 
 describe('migrateAll', () => {
-  it('returns charts unchanged when schemaVersion === 1', () => {
-    const chart = makeChart({ schemaVersion: 1 })
+  it('returns charts unchanged when schemaVersion is current (2)', () => {
+    const chart = makeChart({ schemaVersion: 2 })
     const result = migrateAll([chart])
-    expect(result[0]).toEqual({ ...chart, schemaVersion: 1 })
+    expect(result[0]).toEqual({ ...chart, schemaVersion: 2 })
   })
 
   it('logs a warning and returns chart as-is when schemaVersion is higher than current', () => {
@@ -42,9 +60,49 @@ describe('migrateAll', () => {
     expect(migrateAll([])).toEqual([])
   })
 
-  it('sets schemaVersion to current on all charts in the array', () => {
-    const charts = [makeChart({ id: 'a', schemaVersion: 1 }), makeChart({ id: 'b', schemaVersion: 1 })]
+  it('sets schemaVersion to 2 on all charts in the array', () => {
+    const charts = [makeChart({ id: 'a', schemaVersion: 2 }), makeChart({ id: 'b', schemaVersion: 2 })]
     const result = migrateAll(charts)
-    expect(result.every((c) => c.schemaVersion === 1)).toBe(true)
+    expect(result.every((c) => c.schemaVersion === 2)).toBe(true)
+  })
+
+  describe('v1 → v2 migration', () => {
+    it('bumps schemaVersion from 1 to 2', () => {
+      const chart = makeChart({ schemaVersion: 1 })
+      const [result] = migrateAll([chart])
+      expect(result.schemaVersion).toBe(2)
+    })
+
+    it('adds crop defaults to filled slots that lack them', () => {
+      const v1Slot = {
+        ...makeSlot(),
+        cropX: undefined,
+        cropY: undefined,
+        cropScale: undefined,
+      } as unknown as Slot
+      const chart = makeChart({ schemaVersion: 1, slots: [v1Slot, null] })
+      const [result] = migrateAll([chart])
+      const slot = result.slots[0] as Slot
+      expect(slot.cropX).toBe(0.5)
+      expect(slot.cropY).toBe(0.5)
+      expect(slot.cropScale).toBe(1.0)
+    })
+
+    it('preserves existing crop values on slots that already have them', () => {
+      const slot = makeSlot({ cropX: 0.3, cropY: 0.7, cropScale: 1.5 })
+      const chart = makeChart({ schemaVersion: 1, slots: [slot] })
+      const [result] = migrateAll([chart])
+      const s = result.slots[0] as Slot
+      expect(s.cropX).toBe(0.3)
+      expect(s.cropY).toBe(0.7)
+      expect(s.cropScale).toBe(1.5)
+    })
+
+    it('leaves null slots as null', () => {
+      const chart = makeChart({ schemaVersion: 1, slots: [null, null] })
+      const [result] = migrateAll([chart])
+      expect(result.slots[0]).toBeNull()
+      expect(result.slots[1]).toBeNull()
+    })
   })
 })

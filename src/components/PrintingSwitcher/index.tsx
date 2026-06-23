@@ -68,6 +68,10 @@ export default function PrintingSwitcher({ currentSlot, onSelect, onClose }: Pro
       selectedFaceIndex: (currentSlot.selectedFaceIndex < faceCount
         ? currentSlot.selectedFaceIndex
         : 0) as 0 | 1,
+      // Preserve the user's existing crop framing across printing switches
+      cropX: currentSlot.cropX,
+      cropY: currentSlot.cropY,
+      cropScale: currentSlot.cropScale,
     }
     onSelect(updatedSlot)
     onClose()

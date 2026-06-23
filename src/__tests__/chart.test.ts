@@ -13,6 +13,9 @@ function makeSlot(): Slot {
     layout: 'normal',
     selectedFaceIndex: 0,
     imageUris: [{ artCrop: 'https://example.com/art.jpg' }],
+    cropX: 0.5,
+    cropY: 0.5,
+    cropScale: 1.0,
   }
 }
 
@@ -20,7 +23,7 @@ function makeChart(slots: Array<Slot | null>): Chart {
   return {
     id: 'test',
     name: 'Test',
-    schemaVersion: 1,
+    schemaVersion: 2,
     gridRows: 3,
     gridCols: 3,
     layout: 'uniform',

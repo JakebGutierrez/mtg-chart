@@ -67,21 +67,24 @@ function drawCoverCrop(
   dy: number,
   dw: number,
   dh: number,
+  cropX = 0.5,
+  cropY = 0.5,
+  cropScale = 1.0,
 ) {
   const srcAspect = img.naturalWidth / img.naturalHeight
   const dstAspect = dw / dh
-  let sx: number, sy: number, sw: number, sh: number
+  let sw: number, sh: number
   if (srcAspect > dstAspect) {
     sh = img.naturalHeight
     sw = img.naturalHeight * dstAspect
-    sx = (img.naturalWidth - sw) / 2
-    sy = 0
   } else {
     sw = img.naturalWidth
     sh = img.naturalWidth / dstAspect
-    sx = 0
-    sy = (img.naturalHeight - sh) / 2
   }
+  sw /= cropScale
+  sh /= cropScale
+  const sx = (img.naturalWidth - sw) * cropX
+  const sy = (img.naturalHeight - sh) * cropY
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh)
 }
 
@@ -128,7 +131,7 @@ export function useExport(
       // Cell dims from DOM — matches what the user sees
       const gridClientWidth = gridRef.current.getBoundingClientRect().width
       const cellW = (gridClientWidth - gap * (cols - 1)) / cols
-      const cellH = cellW * (3 / 4)
+      const cellH = chart.displayMode === 'square' ? cellW : cellW * (3 / 4)
 
       const totalGridW = cols * cellW + (cols - 1) * gap
       const totalGridH = rows * cellH + (rows - 1) * gap
@@ -260,7 +263,7 @@ export function useExport(
 
           if (slot && img) {
             ctx.clip()
-            drawCoverCrop(ctx, img, cellX, cellY, cellW, cellH)
+            drawCoverCrop(ctx, img, cellX, cellY, cellW, cellH, slot.cropX, slot.cropY, slot.cropScale)
 
             if (chart.nameDisplayMode === 'overlay') {
               const overlayH = 20 + OVERLAY_FONT_SIZE * 1.5 + 5
