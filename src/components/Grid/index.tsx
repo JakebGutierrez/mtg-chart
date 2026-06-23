@@ -89,7 +89,7 @@ export default function GridArea({
   const isSquare = chart.displayMode === 'square'
 
   return (
-    <main className={styles.area}>
+    <main className={styles.area} onClick={(e) => { if (e.target === e.currentTarget) onCellSelect(null) }}>
       <div className={styles.canvasGroup}>
         {exportError && (
           <div className={styles.errorBanner} role="alert">
@@ -118,6 +118,7 @@ export default function GridArea({
           padding: chart.padding,
           background: chart.backgroundColor,
         }}
+        onClick={(e) => { if (e.target === e.currentTarget) onCellSelect(null) }}
       >
         {chart.title && <div className={styles.chartTitle}>{chart.title}</div>}
         <div
@@ -127,6 +128,7 @@ export default function GridArea({
           <div
             ref={gridRef}
             className={styles.grid}
+            onClick={(e) => { if (e.target === e.currentTarget) onCellSelect(null) }}
             style={{
               gridTemplateRows: `repeat(${chart.gridRows}, 1fr)`,
               gridTemplateColumns: `repeat(${chart.gridCols}, 1fr)`,
