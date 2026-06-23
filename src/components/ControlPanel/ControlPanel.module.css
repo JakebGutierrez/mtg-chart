@@ -329,3 +329,30 @@
   opacity: 0.4;
   cursor: default;
 }
+
+.undoRow {
+  display: flex;
+  gap: 6px;
+}
+
+.undoBtn {
+  flex: 1;
+  padding: 6px 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.undoBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.undoBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}

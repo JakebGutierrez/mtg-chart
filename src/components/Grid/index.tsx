@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, type RefObject } from 'react'
+import { useMemo, useState, useCallback, useRef, type RefObject } from 'react'
 import type { Chart, Slot } from '@/types/chart'
 import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
@@ -12,6 +12,7 @@ interface Props {
   chart: Chart
   onSlotClear: (slotIndex: number) => void
   onSlotUpdate: (slotIndex: number, updated: Slot) => void
+  onSlotMove: (from: number, to: number) => void
   onFaceToggle: (slotIndex: number) => void
   gridRef: RefObject<HTMLDivElement | null>
   exportError: string | null
@@ -24,6 +25,7 @@ export default function GridArea({
   chart,
   onSlotClear,
   onSlotUpdate,
+  onSlotMove,
   onFaceToggle,
   gridRef,
   exportError,
@@ -44,6 +46,9 @@ export default function GridArea({
   const [printingFor, setPrintingFor] = useState<number | null>(null)
 
   const closeContextMenu = useCallback(() => setContextMenu(null), [])
+
+  const dragFromRef = useRef<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
 
   const handleCellContextMenu = useCallback((e: React.MouseEvent, slotIndex: number) => {
     e.preventDefault()
@@ -129,11 +134,26 @@ export default function GridArea({
               return (
                 <div
                   key={cell.slotIndex}
-                  className={styles.cell}
+                  className={`${styles.cell}${dragOver === cell.slotIndex ? ` ${styles.cellDragOver}` : ''}`}
                   style={{ borderRadius: chart.cornerRadius }}
                   onContextMenu={
                     slot ? (e) => handleCellContextMenu(e, cell.slotIndex) : undefined
                   }
+                  draggable={!!slot}
+                  onDragStart={slot ? () => { dragFromRef.current = cell.slotIndex } : undefined}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(cell.slotIndex) }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(null)
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    setDragOver(null)
+                    if (dragFromRef.current !== null && dragFromRef.current !== cell.slotIndex) {
+                      onSlotMove(dragFromRef.current, cell.slotIndex)
+                    }
+                    dragFromRef.current = null
+                  }}
+                  onDragEnd={() => { dragFromRef.current = null; setDragOver(null) }}
                 >
                   {slot && (
                     <>

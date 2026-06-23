@@ -19,6 +19,10 @@ interface Props {
   onCreateChart: () => void
   onDeleteChart: (id: string) => void
   onRenameChart: (id: string, name: string) => void
+  canUndo: boolean
+  canRedo: boolean
+  onUndo: () => void
+  onRedo: () => void
   exporting: boolean
   exportScale: ExportScale
   onScaleChange: (s: ExportScale) => void
@@ -137,6 +141,10 @@ export default function ControlPanel({
   onCreateChart,
   onDeleteChart,
   onRenameChart,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   exporting,
   exportScale,
   onScaleChange,
@@ -290,6 +298,28 @@ export default function ControlPanel({
       </div>
 
       <footer className={styles.footer}>
+        <div className={styles.undoRow}>
+          <button
+            className={styles.undoBtn}
+            type="button"
+            disabled={!canUndo}
+            onClick={onUndo}
+            aria-label="Undo"
+            title="Undo (Cmd+Z)"
+          >
+            Undo
+          </button>
+          <button
+            className={styles.undoBtn}
+            type="button"
+            disabled={!canRedo}
+            onClick={onRedo}
+            aria-label="Redo"
+            title="Redo (Cmd+Shift+Z)"
+          >
+            Redo
+          </button>
+        </div>
         <div className={styles.scaleRow}>
           <span className={styles.label}>Scale</span>
           <div className={styles.segmented} role="radiogroup" aria-label="Export scale">
