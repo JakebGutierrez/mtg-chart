@@ -347,13 +347,37 @@ Minimal planning needed: partial-failure handling strategy.
   collector number. Rate-limit awareness (respect 429, queue with delay).
 - UI: textarea in SearchPanel or a dedicated import modal.
 
-### Phase 14 — Share Links
+### Phase 14 — Commander Mode + Hybrid Hero Layout
+Needs planning: hero cell size presets and freeform config UI.
+- `heroConfig?: Array<{ row: number; col: number; rowSpan: number; colSpan: number }>`
+  added to `Chart`; schema version bump + migration (default: empty array = uniform).
+- `generateCellMap` updated to produce `'hero'` + `'covered'` cells from `heroConfig`.
+  Grid renderer already handles both kinds correctly — no changes needed there.
+- **Commander preset**: UI toggle in sidebar sets one hero cell at `(0, 0)` with
+  `rowSpan: 2, colSpan: 2` (or similar). Covers the partner mechanic — max 2 commanders,
+  modelled as two adjacent hero cells e.g. `(0,0)` and `(0,2)` each `2×1`, or a single
+  `2×2` hero for a solo commander.
+- Freeform hero placement (click to promote a cell to hero, drag to resize) is post-
+  commander scope — note it here for later.
+
+### Phase 15 — Sort + Shuffle
+Fully scoped. Pure slot reordering — no model change, no schema bump.
+- **Sort**: reorder filled slots in row-major order by a chosen key, empty slots stay
+  empty (append to end or preserve position — needs one UI decision).
+  Sort keys: card type (creature → instant → sorcery → enchantment → artifact → land),
+  CMC (numeric, low→high or high→low), colour (WUBRG order + multicolour + colourless).
+  Requires storing `cmc`, `colors`, and `type_line` on `Slot` at add/switch time
+  (currently not stored — schema version bump + migration required, default null).
+- **Shuffle**: Fisher-Yates on filled slot indices, empties stay empty.
+- UI: Sort dropdown + Shuffle button in a new "Arrange" section in `ControlPanel`.
+
+### Phase 16 — Share Links
 Fully scoped. Self-contained, no dependencies.
 - Serialise `Chart` to base64 JSON → URL query param `?c=…`.
 - Decode on load (takes precedence over localStorage if present).
 - Copy link button in sidebar footer.
 
-### Phase 15 — Custom Items
+### Phase 17 — Custom Items
 Minimal planning needed: upload UI placement (search panel tab vs. context menu).
 - `slot.kind = 'custom'` + `localImageDataUrl` field on `Slot`.
 - `kind` discriminator already in place — additive, no migration required.
@@ -370,8 +394,7 @@ Minimal planning needed: upload UI placement (search panel tab vs. context menu)
 
 ## Post-MVP Integration Points (reference)
 
-1. **Hybrid hero layout** — add `heroConfig` array to `Chart`; generate non-trivial
-   CellMap in `cellMap.ts`; renderer, export, and DnD unchanged.
+1. **Hybrid hero layout / Commander mode** — see Phase 14 above.
 
 2. **Drag-to-move / swap cells** — see Phase 10 above.
 
@@ -379,9 +402,11 @@ Minimal planning needed: upload UI placement (search panel tab vs. context menu)
 
 4. **Decklist import** — see Phase 13 above.
 
-5. **URL-encoded share links** — see Phase 14 above.
+5. **Sort + Shuffle** — see Phase 15 above.
 
-6. **Custom items** — see Phase 15 above.
+6. **URL-encoded share links** — see Phase 16 above.
+
+7. **Custom items** — see Phase 17 above.
 
 7. **Supabase backend** — swap `useCharts` localStorage calls for API calls; schema is
    self-contained and portable.
