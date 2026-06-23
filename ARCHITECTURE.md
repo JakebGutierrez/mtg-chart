@@ -303,34 +303,92 @@ from it directly. No second fetch needed.
 
 ---
 
-## Post-MVP Integration Points (priority order)
+## Planned Phases (post-MVP)
+
+### Phase 9 — Persistence + Multiple Charts
+Fully scoped. No planning gaps.
+- `useCharts` hook: `charts[]` + `activeId` in localStorage under `mtg-chart:charts` /
+  `mtg-chart:activeId`. CRUD: `createChart`, `deleteChart`, `updateChart`, `setActiveId`.
+- `schemaVersion.ts` migration runner: `migrate(chart)` chain, `migrateAll(charts[])`.
+  No-op at v1; infrastructure must exist for future bumps.
+- Chart picker UI in `ControlPanel` above Search: list of chart names, active highlighted,
+  `+` to create, `×` to delete (hidden if only one), inline name edit on active chart.
+- `App.tsx`: replace `useState<Chart>` with `useCharts`; all mutation callbacks call
+  `updateChart(modifiedChart)` instead of `setChart`.
+
+### Phase 10 — Drag-to-move + Undo/Redo
+Drag fully scoped. Undo needs one decision: history depth (suggest cap at 50 steps).
+- **Drag-to-move**: `draggable` on filled cells, `onDrop` on any cell.
+  `handleSlotSwap(from, to)` in `App.tsx`: move if target empty, swap if filled.
+  CellMap semantics already correct — drag moves card data only, layout roles unchanged.
+  ~30–40 lines, no animation required.
+- **Undo/redo**: replace `useState<Chart>` (or `useCharts`) with `useReducer` + history
+  stack. Keyboard shortcut Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z. Undo/Redo buttons in sidebar.
+
+### Phase 11 — UI Polish
+All additive, zero model changes. No planning needed.
+- Card count / capacity indicator (e.g. "12 / 25 filled") in sidebar or canvas header.
+- Keyboard navigation: arrow keys move focus between cells, Delete clears focused cell,
+  Enter opens context menu.
+- Cell numbering toggle: show slot index on each cell (additive UI control, no model
+  change — `schemaVersion` bump not required).
+
+### Phase 12 — Square Mode + Manual Crop Framing
+Needs planning: crop UI design (drag-handle overlay vs. separate modal).
+- `displayMode: 'square'` rendering: cells use `aspect-ratio: 1/1`.
+- `cropX` / `cropY` / `cropScale` on `Slot` already defined; activate them.
+  Export uses `large` image URI (already stored) for the transform draw call.
+- Schema version bump + migration: add `{ cropX: 0.5, cropY: 0.5, cropScale: 1.0 }` to
+  all existing slots (equivalent to current `object-fit: cover` behaviour).
+
+### Phase 13 — Decklist Import
+Minimal planning needed: partial-failure handling strategy.
+- Parse MTGO format (`4x Lightning Bolt (M20)`); batch Scryfall lookups by set code +
+  collector number. Rate-limit awareness (respect 429, queue with delay).
+- UI: textarea in SearchPanel or a dedicated import modal.
+
+### Phase 14 — Share Links
+Fully scoped. Self-contained, no dependencies.
+- Serialise `Chart` to base64 JSON → URL query param `?c=…`.
+- Decode on load (takes precedence over localStorage if present).
+- Copy link button in sidebar footer.
+
+### Phase 15 — Custom Items
+Minimal planning needed: upload UI placement (search panel tab vs. context menu).
+- `slot.kind = 'custom'` + `localImageDataUrl` field on `Slot`.
+- `kind` discriminator already in place — additive, no migration required.
+- File input accepts JPEG/PNG; store as data URL in slot.
+
+### Needs design before starting
+- **Font selection** — what fonts to offer, how to bundle/load them, canvas rendering
+  implications. `await document.fonts.ready` hook already in export flow.
+- **True print-resolution export** — canvas tile-and-stitch for 300 DPI output.
+  Significant architectural work; tiling strategy needs its own design session.
+- **Supabase backend** — auth, schema, migration from localStorage. Post-everything-else.
+
+---
+
+## Post-MVP Integration Points (reference)
 
 1. **Hybrid hero layout** — add `heroConfig` array to `Chart`; generate non-trivial
    CellMap in `cellMap.ts`; renderer, export, and DnD unchanged.
 
-2. **Drag-to-move / swap cells** — `draggable` on filled cells, `onDrop` on any cell.
-   One new callback `handleSlotSwap(from, to)` in `App.tsx`: move if target empty, swap
-   if filled. CellMap semantics already correct — drag moves card data only, layout roles
-   unchanged. No data model change needed. ~30–40 lines MVP, no animation required.
+2. **Drag-to-move / swap cells** — see Phase 10 above.
 
-3. **Manual drag-to-frame + square mode** — add `cropX`/`cropY`/`cropScale` to `Slot`;
-   export applies transform to canvas draw call using `large` image URI (already stored).
-   Requires `<img>` element in live UI (already mandated).
+3. **Manual drag-to-frame + square mode** — see Phase 12 above.
 
-3. **Decklist import** — parse MTGO format (`4x Lightning Bolt (M20)`); batch Scryfall
-   lookups by set code + collector number.
+4. **Decklist import** — see Phase 13 above.
 
-4. **URL-encoded share links** — serialise `Chart` to base64 query param.
+5. **URL-encoded share links** — see Phase 14 above.
 
-5. **Custom items** — `slot.kind = "custom"` + `localImageDataUrl`; no Scryfall fetch
-   path. `kind` discriminator is already in place.
+6. **Custom items** — see Phase 15 above.
 
-6. **Supabase backend** — swap `useCharts` localStorage calls for API calls; schema is
+7. **Supabase backend** — swap `useCharts` localStorage calls for API calls; schema is
    self-contained and portable.
 
-7. **Font selection** — requires `@font-face` data URLs available before canvas draw;
+8. **Font selection** — requires `@font-face` data URLs available before canvas draw;
    `await document.fonts.ready` hook already in export flow.
 
-8. **Standalone numbering toggle** — additive UI control; no model change.
+9. **Standalone numbering toggle** — see Phase 11 above.
 
-9. **True print-resolution export** — canvas tile-and-stitch; significant new code.
+10. **True print-resolution export** — canvas tile-and-stitch; significant new code.
