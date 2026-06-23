@@ -36,7 +36,7 @@ function isChartShaped(v: unknown): boolean {
 // Does not call persist() — the useEffect in useCharts handles all writes.
 // Do not add an eager persist() call here; that would re-introduce side effects
 // inside the lazy useState initialiser, which React may invoke more than once.
-function loadOrInit(): { charts: Chart[]; activeId: string } {
+export function loadOrInit(): { charts: Chart[]; activeId: string } {
   try {
     const chartsJson = localStorage.getItem(CHARTS_KEY)
     const storedActiveId = localStorage.getItem(ACTIVE_ID_KEY)
