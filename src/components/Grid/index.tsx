@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, type RefObject } from 'react'
 import type { Chart, Slot } from '@/types/chart'
 import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
@@ -13,9 +13,24 @@ interface Props {
   onSlotClear: (slotIndex: number) => void
   onSlotUpdate: (slotIndex: number, updated: Slot) => void
   onFaceToggle: (slotIndex: number) => void
+  gridRef: RefObject<HTMLDivElement | null>
+  exportError: string | null
+  exportWarning: string | null
+  onDismissError: () => void
+  onDismissWarning: () => void
 }
 
-export default function GridArea({ chart, onSlotClear, onSlotUpdate, onFaceToggle }: Props) {
+export default function GridArea({
+  chart,
+  onSlotClear,
+  onSlotUpdate,
+  onFaceToggle,
+  gridRef,
+  exportError,
+  exportWarning,
+  onDismissError,
+  onDismissWarning,
+}: Props) {
   const cellMap = useMemo(
     () => generateCellMap(chart.gridRows, chart.gridCols),
     [chart.gridRows, chart.gridCols],
@@ -64,7 +79,29 @@ export default function GridArea({ chart, onSlotClear, onSlotUpdate, onFaceToggl
 
   return (
     <main className={styles.area}>
-      <div
+      <div className={styles.canvasGroup}>
+        {exportError && (
+          <div className={styles.errorBanner} role="alert">
+            <span>{exportError}</span>
+            <button type="button" className={styles.errorDismiss} onClick={onDismissError} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
+        )}
+        {exportWarning && !exportError && (
+          <div className={styles.warningBanner} role="status">
+            <span>{exportWarning}</span>
+            <button
+              type="button"
+              className={styles.errorDismiss}
+              onClick={onDismissWarning}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
+        <div
         className={styles.canvas}
         style={{
           padding: chart.padding,
@@ -77,6 +114,7 @@ export default function GridArea({ chart, onSlotClear, onSlotUpdate, onFaceToggl
           style={{ gap: chart.nameDisplayMode === 'sidebar' ? 16 : undefined }}
         >
           <div
+            ref={gridRef}
             className={styles.grid}
             style={{
               gridTemplateRows: `repeat(${chart.gridRows}, 1fr)`,
@@ -132,6 +170,7 @@ export default function GridArea({ chart, onSlotClear, onSlotUpdate, onFaceToggl
           {chart.nameDisplayMode === 'sidebar' && (
             <NameDisplay mode="sidebar" chart={chart} cellMap={cellMap} />
           )}
+        </div>
         </div>
       </div>
 

@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import './App.css'
 import ControlPanel from '@/components/ControlPanel'
 import GridArea from '@/components/Grid'
 import { createDefaultChart } from '@/utils/defaultChart'
 import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
+import { useExport } from '@/hooks/useExport'
 import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode } from '@/types/chart'
 
 const STYLE_LIMITS: Record<NumericStyleField, [min: number, max: number]> = {
@@ -104,6 +105,31 @@ function App() {
     })
   }, [])
 
+  const handleSlotImageUpdate = useCallback(
+    (slotIndex: number, imageUris: Slot['imageUris']) => {
+      setChart((prev) => {
+        const slot = getSlot(prev, slotIndex)
+        if (!slot) return prev
+        const slots = [...prev.slots]
+        slots[slotIndex] = { ...slot, imageUris }
+        return { ...prev, slots }
+      })
+    },
+    [],
+  )
+
+  const gridRef = useRef<HTMLDivElement>(null)
+  const {
+    exporting,
+    error: exportError,
+    warning: exportWarning,
+    scale: exportScale,
+    setScale: setExportScale,
+    dismissError,
+    dismissWarning,
+    triggerExport,
+  } = useExport(chart, handleSlotImageUpdate, gridRef)
+
   return (
     <div className="app">
       <ControlPanel
@@ -114,12 +140,21 @@ function App() {
         onStyleStep={handleStyleStep}
         onTitleChange={handleTitleChange}
         onNameDisplayChange={handleNameDisplayChange}
+        exporting={exporting}
+        exportScale={exportScale}
+        onScaleChange={setExportScale}
+        onExport={triggerExport}
       />
       <GridArea
         chart={chart}
         onSlotClear={handleSlotClear}
         onSlotUpdate={handleSlotUpdate}
         onFaceToggle={handleFaceToggle}
+        gridRef={gridRef}
+        exportError={exportError}
+        exportWarning={exportWarning}
+        onDismissError={dismissError}
+        onDismissWarning={dismissWarning}
       />
     </div>
   )

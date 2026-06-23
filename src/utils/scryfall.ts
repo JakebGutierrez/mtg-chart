@@ -118,3 +118,10 @@ export function normaliseResults(response: ScryfallSearchResponse): Slot[] {
     return slot ? [slot] : []
   })
 }
+
+export async function fetchCardById(scryfallId: string): Promise<Slot | null> {
+  const res = await fetch(`${API_BASE}/cards/${scryfallId}`, { mode: 'cors' })
+  if (!res.ok) return null
+  const card = (await res.json()) as ScryfallCard
+  return normaliseCard(card)
+}

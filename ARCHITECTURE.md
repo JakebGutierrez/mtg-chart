@@ -308,7 +308,12 @@ from it directly. No second fetch needed.
 1. **Hybrid hero layout** — add `heroConfig` array to `Chart`; generate non-trivial
    CellMap in `cellMap.ts`; renderer, export, and DnD unchanged.
 
-2. **Manual drag-to-frame + square mode** — add `cropX`/`cropY`/`cropScale` to `Slot`;
+2. **Drag-to-move / swap cells** — `draggable` on filled cells, `onDrop` on any cell.
+   One new callback `handleSlotSwap(from, to)` in `App.tsx`: move if target empty, swap
+   if filled. CellMap semantics already correct — drag moves card data only, layout roles
+   unchanged. No data model change needed. ~30–40 lines MVP, no animation required.
+
+3. **Manual drag-to-frame + square mode** — add `cropX`/`cropY`/`cropScale` to `Slot`;
    export applies transform to canvas draw call using `large` image URI (already stored).
    Requires `<img>` element in live UI (already mandated).
 

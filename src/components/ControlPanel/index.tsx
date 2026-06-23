@@ -1,4 +1,5 @@
 import type { Chart, Slot, NumericStyleField, NameDisplayMode } from '@/types/chart'
+import type { ExportScale } from '@/hooks/useExport'
 import SearchPanel from '@/components/SearchPanel'
 import Stepper from '@/components/Stepper'
 import styles from './ControlPanel.module.css'
@@ -11,6 +12,10 @@ interface Props {
   onStyleStep: (field: NumericStyleField, delta: number) => void
   onTitleChange: (value: string) => void
   onNameDisplayChange: (mode: NameDisplayMode) => void
+  exporting: boolean
+  exportScale: ExportScale
+  onScaleChange: (s: ExportScale) => void
+  onExport: () => void
 }
 
 export default function ControlPanel({
@@ -21,8 +26,12 @@ export default function ControlPanel({
   onStyleStep,
   onTitleChange,
   onNameDisplayChange,
+  exporting,
+  exportScale,
+  onScaleChange,
+  onExport,
 }: Props) {
-  const occupiedCount = chart.slots.filter((s) => s !== null).length
+  const occupiedCount = chart.slots.filter((s) => s != null).length
 
   return (
     <aside className={styles.panel}>
@@ -161,8 +170,30 @@ export default function ControlPanel({
       </div>
 
       <footer className={styles.footer}>
-        <button className={styles.exportBtn} type="button" disabled>
-          Export PNG
+        <div className={styles.scaleRow}>
+          <span className={styles.label}>Scale</span>
+          <div className={styles.segmented} role="radiogroup" aria-label="Export scale">
+            {([1, 2] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                role="radio"
+                aria-checked={exportScale === s}
+                className={`${styles.segBtn}${exportScale === s ? ` ${styles.segBtnActive}` : ''}`}
+                onClick={() => onScaleChange(s)}
+              >
+                {s}×
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          className={styles.exportBtn}
+          type="button"
+          disabled={exporting || occupiedCount === 0}
+          onClick={onExport}
+        >
+          {exporting ? 'Exporting…' : 'Export PNG'}
         </button>
       </footer>
     </aside>
