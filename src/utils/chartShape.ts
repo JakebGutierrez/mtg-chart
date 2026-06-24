@@ -1,4 +1,4 @@
-export function isSlotShaped(el: unknown): boolean {
+function isSlotShaped(el: unknown): boolean {
   if (el === null) return true
   if (typeof el !== 'object') return false
   const s = el as Record<string, unknown>

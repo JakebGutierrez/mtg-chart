@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { Chart } from '@/types/chart'
 import { createDefaultChart } from '@/utils/defaultChart'
 import { migrateAll } from '@/utils/schemaVersion'
@@ -28,23 +28,25 @@ function readStoredCharts(): Chart[] {
   return []
 }
 
-// Set to true by loadOrInit when a share-link param is successfully decoded.
-// Module-level so it survives StrictMode's double-invocation of the lazy
-// useState initialiser without needing a ref write inside the initialiser
-// (which the react-hooks/refs rule forbids).
-let _consumedShareParam = false
+interface ChartsState {
+  charts: Chart[]
+  activeId: string
+  // Set to true only when loadOrInit decoded a valid share-link param.
+  // Absent (undefined) on normal loads and after any subsequent setState.
+  consumedShareParam?: true
+}
 
 // Does not call persist() — the useEffect in useCharts handles all writes.
-// Does not call replaceState — see the post-mount useEffect in useCharts().
-export function loadOrInit(): { charts: Chart[]; activeId: string } {
+// Does not call replaceState — a post-mount useEffect in useCharts does that,
+// conditional on consumedShareParam so malformed ?c= params are left untouched.
+export function loadOrInit(): ChartsState {
   const param = new URLSearchParams(window.location.search).get('c')
   if (param) {
     const shared = decodeChart(param)
     if (shared) {
-      _consumedShareParam = true
       const existingCharts = readStoredCharts()
       const chart = { ...shared, id: crypto.randomUUID() }
-      return { charts: [...existingCharts, chart], activeId: chart.id }
+      return { charts: [...existingCharts, chart], activeId: chart.id, consumedShareParam: true }
     }
   }
 
@@ -69,11 +71,6 @@ export function loadOrInit(): { charts: Chart[]; activeId: string } {
   return { charts: [fresh], activeId: fresh.id }
 }
 
-interface ChartsState {
-  charts: Chart[]
-  activeId: string
-}
-
 export function useCharts(): {
   charts: Chart[]
   activeId: string
@@ -86,12 +83,16 @@ export function useCharts(): {
 } {
   const [state, setState] = useState<ChartsState>(loadOrInit)
 
-  // Strip ?c= only when loadOrInit actually consumed a valid share link —
-  // a malformed or unrelated param is left in the URL (or more precisely,
-  // _consumedShareParam stays false so we don't touch the URL at all).
+  // Capture the initial consumedShareParam into a ref so the post-mount effect
+  // can read it without adding it to the dependency array (it's a one-shot flag
+  // that is only meaningful at initial load time). Reading state here (not
+  // ref.current) is safe — it's not a ref access during render.
+  const consumedShareParamRef = useRef(state.consumedShareParam ?? false)
+
+  // Strip ?c= only when loadOrInit successfully decoded a share link.
+  // A malformed or unrelated ?c= param leaves the URL unchanged.
   useEffect(() => {
-    if (_consumedShareParam) {
-      _consumedShareParam = false
+    if (consumedShareParamRef.current) {
       window.history.replaceState(null, '', window.location.pathname)
     }
   }, [])

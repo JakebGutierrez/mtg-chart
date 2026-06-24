@@ -68,6 +68,7 @@ describe('loadOrInit', () => {
     expect(charts).toHaveLength(1)
     expect(charts[0].id).toBe('chart-a')
     expect(activeId).toBe('chart-a')
+    expect(charts[0].schemaVersion).toBe(4)
   })
 
   it('falls back to a fresh default when stored JSON is malformed', () => {
