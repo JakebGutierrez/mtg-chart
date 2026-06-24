@@ -47,6 +47,7 @@ interface Props {
   onOpenImport: () => void
   onSort: (key: SortKey) => void
   onShuffle: () => void
+  onCopyLink: () => void
 }
 
 function ChartPicker({
@@ -294,9 +295,19 @@ export default function ControlPanel({
   onOpenImport,
   onSort,
   onShuffle,
+  onCopyLink,
 }: Props) {
   const occupiedCount = chart.slots.filter((s) => s != null).length
   const [sortKey, setSortKey] = useState<SortKey>('type')
+  const [copied, setCopied] = useState(false)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleCopyLink() {
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    onCopyLink()
+    setCopied(true)
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <aside className={styles.panel}>
@@ -566,6 +577,13 @@ export default function ControlPanel({
             Redo
           </button>
         </div>
+        <button
+          className={styles.copyLinkBtn}
+          type="button"
+          onClick={handleCopyLink}
+        >
+          {copied ? 'Copied!' : 'Copy link'}
+        </button>
         <div className={styles.scaleRow}>
           <span className={styles.label}>Scale</span>
           <div className={styles.segmented} role="radiogroup" aria-label="Export scale">

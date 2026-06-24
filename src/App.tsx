@@ -9,6 +9,7 @@ import { useExport } from '@/hooks/useExport'
 import { useCharts } from '@/hooks/useCharts'
 import { sortSlots, shuffleSlots } from '@/utils/sort'
 import type { SortKey } from '@/utils/sort'
+import { encodeChart } from '@/utils/shareLink'
 import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode, Layout, HeroConfig } from '@/types/chart'
 
 type LayoutMode = 'uniform' | 'commander' | 'partner'
@@ -296,6 +297,12 @@ function App() {
     updateChartWithHistory((prev) => ({ ...prev, slots: shuffleSlots(prev.slots) }))
   }, [updateChartWithHistory])
 
+  const handleCopyLink = useCallback(() => {
+    const encoded = encodeChart(activeChart)
+    const url = `${window.location.origin}${window.location.pathname}?c=${encoded}`
+    navigator.clipboard.writeText(url).catch(() => {})
+  }, [activeChart])
+
   const handleFaceToggle = useCallback(
     (slotIndex: number) => {
       updateChartWithHistory((prev) => {
@@ -448,6 +455,7 @@ function App() {
         onOpenImport={() => setShowImportModal(true)}
         onSort={handleSort}
         onShuffle={handleShuffle}
+        onCopyLink={handleCopyLink}
       />
       {showImportModal && (
         <ImportModal

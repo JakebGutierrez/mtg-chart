@@ -4,7 +4,7 @@ export function createDefaultChart(): Chart {
   return {
     id: crypto.randomUUID(),
     name: 'My Chart',
-    schemaVersion: 3,
+    schemaVersion: 4,
     gridRows: 5,
     gridCols: 5,
     layout: 'uniform',

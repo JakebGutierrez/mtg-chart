@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import type { Chart } from '@/types/chart'
 import { createDefaultChart } from '@/utils/defaultChart'
 import { migrateAll } from '@/utils/schemaVersion'
+import { decodeChart } from '@/utils/shareLink'
 
 const CHARTS_KEY = 'mtg-chart:charts'
 const ACTIVE_ID_KEY = 'mtg-chart:activeId'
@@ -37,6 +38,16 @@ function isChartShaped(v: unknown): boolean {
 // Do not add an eager persist() call here; that would re-introduce side effects
 // inside the lazy useState initialiser, which React may invoke more than once.
 export function loadOrInit(): { charts: Chart[]; activeId: string } {
+  const param = new URLSearchParams(window.location.search).get('c')
+  if (param) {
+    const shared = decodeChart(param)
+    if (shared) {
+      window.history.replaceState(null, '', window.location.pathname)
+      const chart = { ...shared, id: crypto.randomUUID() }
+      return { charts: [chart], activeId: chart.id }
+    }
+  }
+
   try {
     const chartsJson = localStorage.getItem(CHARTS_KEY)
     const storedActiveId = localStorage.getItem(ACTIVE_ID_KEY)

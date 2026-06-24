@@ -407,6 +407,23 @@
   cursor: default;
 }
 
+.copyLinkBtn {
+  width: 100%;
+  padding: 6px 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.copyLinkBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* Arrange section */
 .arrangeSelect {
   padding: 4px 6px;
