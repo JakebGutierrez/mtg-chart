@@ -34,6 +34,7 @@ interface Props {
   onCropDragBegin: () => void
   onCropLive: (crop: CropValues) => void
   onCropChange: (crop: CropValues) => void
+  onOpenImport: () => void
 }
 
 function ChartPicker({
@@ -277,6 +278,7 @@ export default function ControlPanel({
   onCropDragBegin,
   onCropLive,
   onCropChange,
+  onOpenImport,
 }: Props) {
   const occupiedCount = chart.slots.filter((s) => s != null).length
 
@@ -297,7 +299,18 @@ export default function ControlPanel({
         />
 
         <section className={styles.section}>
-          <h2 className={styles.sectionLabel}>Search</h2>
+          <div className={styles.pickerHeader}>
+            <h2 className={styles.sectionLabel}>Search</h2>
+            <button
+              className={styles.pickerAdd}
+              type="button"
+              title="Import decklist"
+              aria-label="Import decklist"
+              onClick={onOpenImport}
+            >
+              ↑
+            </button>
+          </div>
           <SearchPanel chart={chart} onSlotFill={onSlotFill} />
         </section>
 

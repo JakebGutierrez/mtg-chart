@@ -19,6 +19,16 @@ export function buildSearchUrl(query: string): string {
   return `${API_BASE}/cards/search?q=${encodeURIComponent(q)}`
 }
 
+export function buildImportUrl(name: string, setCode?: string, collectorNumber?: string): string {
+  if (setCode && collectorNumber) {
+    return `${API_BASE}/cards/${setCode.toLowerCase()}/${collectorNumber}`
+  }
+  if (setCode) {
+    return `${API_BASE}/cards/named?exact=${encodeURIComponent(name)}&set=${setCode.toLowerCase()}`
+  }
+  return `${API_BASE}/cards/named?fuzzy=${encodeURIComponent(name)}`
+}
+
 export function buildPrintingsUrl(oracleId: string): string {
   const q = `oracleId:${oracleId} lang:en -is:digital`
   return `${API_BASE}/cards/search?q=${encodeURIComponent(q)}&unique=prints`
@@ -34,7 +44,7 @@ interface ScryfallCardFace {
   image_uris?: ScryfallImageUris
 }
 
-interface ScryfallCard {
+export interface ScryfallCard {
   id: string
   oracle_id: string
   name: string

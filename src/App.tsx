@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import './App.css'
 import ControlPanel from '@/components/ControlPanel'
 import GridArea from '@/components/Grid'
+import ImportModal from '@/components/ImportModal'
 import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
 import { useExport } from '@/hooks/useExport'
@@ -51,6 +52,7 @@ function App() {
   )
 
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null)
+  const [showImportModal, setShowImportModal] = useState(false)
 
   // History resets synchronously when switching charts so canUndo/canRedo are
   // immediately correct for the newly active chart.
@@ -105,12 +107,16 @@ function App() {
   // Stable keyboard listener via ref — avoids re-registering on every history change.
   // useLayoutEffect (not useEffect) closes the window between commit and the native
   // keydown firing, preventing a keystroke from calling a stale closure.
-  const undoRedoRef = useRef({ undo, redo })
+  const undoRedoRef = useRef({ undo, redo, importActive: false })
   useLayoutEffect(() => {
-    undoRedoRef.current = { undo, redo }
+    undoRedoRef.current = { undo, redo, importActive: showImportModal }
   })
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      // Block undo/redo while the import modal is open — runLoop has pre-assigned
+      // slot indices and does not cancel on chart changes, so mutating the chart
+      // mid-import can cause cards to land in the wrong slots.
+      if (undoRedoRef.current.importActive) return
       // Cmd/Ctrl+Z = undo; Cmd/Ctrl+Shift+Z = redo; Ctrl+Y = redo (Windows)
       const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z'
       const isRedo =
@@ -306,6 +312,37 @@ function App() {
     [updateChartWithHistory, selectedSlotIndex],
   )
 
+  // Import: push a single undo snapshot before any cards are placed.
+  const handleImportBegin = useCallback(() => {
+    setHistory((h) => ({
+      past: [...h.past.slice(-49), activeChart],
+      future: [],
+    }))
+  }, [activeChart])
+
+  // Import: place a card at a specific pre-assigned slot index (no history push per card).
+  const handleSlotPlace = useCallback(
+    (slotIndex: number, slot: Slot) => {
+      updateChart((prev) => {
+        const slots = [...prev.slots]
+        slots[slotIndex] = slot
+        return { ...prev, slots }
+      })
+    },
+    [updateChart],
+  )
+
+  // Import: expand grid rows to fit imported cards (no history push — covered by handleImportBegin).
+  const handleImportExpand = useCallback(
+    (newRows: number) => {
+      updateChart((prev) => {
+        if (newRows <= prev.gridRows || newRows > 10) return prev
+        return { ...prev, gridRows: newRows }
+      })
+    },
+    [updateChart],
+  )
+
   // NOT history-tracked: transparent image URI cache refresh on 404 during export.
   const handleSlotImageUpdate = useCallback(
     (slotIndex: number, imageUris: Slot['imageUris']) => {
@@ -352,8 +389,8 @@ function App() {
         onCreateChart={handleCreateChart}
         onDeleteChart={handleDeleteChart}
         onRenameChart={renameChart}
-        canUndo={history.past.length > 0}
-        canRedo={history.future.length > 0}
+        canUndo={history.past.length > 0 && !showImportModal}
+        canRedo={history.future.length > 0 && !showImportModal}
         onUndo={undo}
         onRedo={redo}
         exporting={exporting}
@@ -364,7 +401,17 @@ function App() {
         onCropDragBegin={handleCropDragBegin}
         onCropLive={handleCropLive}
         onCropChange={handleCropChange}
+        onOpenImport={() => setShowImportModal(true)}
       />
+      {showImportModal && (
+        <ImportModal
+          chart={activeChart}
+          onImportBegin={handleImportBegin}
+          onSlotPlace={handleSlotPlace}
+          onExpandGrid={handleImportExpand}
+          onClose={() => setShowImportModal(false)}
+        />
+      )}
       <GridArea
         chart={activeChart}
         onSlotClear={handleSlotClear}
