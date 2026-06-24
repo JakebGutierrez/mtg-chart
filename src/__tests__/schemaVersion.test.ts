@@ -16,6 +16,9 @@ function makeSlot(overrides: Partial<Slot> = {}): Slot {
     cropX: 0.5,
     cropY: 0.5,
     cropScale: 1.0,
+    cmc: null,
+    colors: null,
+    typeLine: null,
     ...overrides,
   }
 }
@@ -42,10 +45,10 @@ function makeChart(overrides: Partial<Chart> = {}): Chart {
 }
 
 describe('migrateAll', () => {
-  it('returns charts unchanged when schemaVersion is current (3)', () => {
-    const chart = makeChart({ schemaVersion: 3 })
+  it('returns charts unchanged when schemaVersion is current (4)', () => {
+    const chart = makeChart({ schemaVersion: 4 })
     const result = migrateAll([chart])
-    expect(result[0]).toEqual({ ...chart, schemaVersion: 3 })
+    expect(result[0]).toEqual({ ...chart, schemaVersion: 4 })
   })
 
   it('logs a warning and returns chart as-is when schemaVersion is higher than current', () => {
@@ -61,17 +64,17 @@ describe('migrateAll', () => {
     expect(migrateAll([])).toEqual([])
   })
 
-  it('sets schemaVersion to 3 on all charts in the array', () => {
-    const charts = [makeChart({ id: 'a', schemaVersion: 3 }), makeChart({ id: 'b', schemaVersion: 3 })]
+  it('sets schemaVersion to 4 on all charts in the array', () => {
+    const charts = [makeChart({ id: 'a', schemaVersion: 4 }), makeChart({ id: 'b', schemaVersion: 4 })]
     const result = migrateAll(charts)
-    expect(result.every((c) => c.schemaVersion === 3)).toBe(true)
+    expect(result.every((c) => c.schemaVersion === 4)).toBe(true)
   })
 
   describe('v2 → v3 migration', () => {
-    it('bumps schemaVersion from 2 to 3', () => {
+    it('bumps schemaVersion from 2 to 4', () => {
       const chart = makeChart({ schemaVersion: 2 })
       const [result] = migrateAll([chart])
-      expect(result.schemaVersion).toBe(3)
+      expect(result.schemaVersion).toBe(4)
     })
 
     it('adds heroConfig: [] when missing', () => {
@@ -89,10 +92,10 @@ describe('migrateAll', () => {
   })
 
   describe('v1 → v2 migration', () => {
-    it('bumps schemaVersion from 1 to 3 (runs both migrations)', () => {
+    it('bumps schemaVersion from 1 to 4 (runs all migrations)', () => {
       const chart = makeChart({ schemaVersion: 1 })
       const [result] = migrateAll([chart])
-      expect(result.schemaVersion).toBe(3)
+      expect(result.schemaVersion).toBe(4)
     })
 
     it('adds crop defaults to filled slots that lack them', () => {

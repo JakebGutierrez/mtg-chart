@@ -7,6 +7,8 @@ import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
 import { useExport } from '@/hooks/useExport'
 import { useCharts } from '@/hooks/useCharts'
+import { sortSlots, shuffleSlots } from '@/utils/sort'
+import type { SortKey } from '@/utils/sort'
 import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode, Layout, HeroConfig } from '@/types/chart'
 
 type LayoutMode = 'uniform' | 'commander' | 'partner'
@@ -283,6 +285,17 @@ function App() {
     [activeChart, updateChartWithHistory],
   )
 
+  const handleSort = useCallback(
+    (key: SortKey) => {
+      updateChartWithHistory((prev) => ({ ...prev, slots: sortSlots(prev.slots, key) }))
+    },
+    [updateChartWithHistory],
+  )
+
+  const handleShuffle = useCallback(() => {
+    updateChartWithHistory((prev) => ({ ...prev, slots: shuffleSlots(prev.slots) }))
+  }, [updateChartWithHistory])
+
   const handleFaceToggle = useCallback(
     (slotIndex: number) => {
       updateChartWithHistory((prev) => {
@@ -433,6 +446,8 @@ function App() {
         onCropLive={handleCropLive}
         onCropChange={handleCropChange}
         onOpenImport={() => setShowImportModal(true)}
+        onSort={handleSort}
+        onShuffle={handleShuffle}
       />
       {showImportModal && (
         <ImportModal

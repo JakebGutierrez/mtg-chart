@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { Chart, Slot, NumericStyleField, NameDisplayMode, DisplayMode, HeroConfig } from '@/types/chart'
+import type { SortKey } from '@/utils/sort'
 
 type LayoutMode = 'uniform' | 'commander' | 'partner'
 
@@ -44,6 +45,8 @@ interface Props {
   onCropLive: (crop: CropValues) => void
   onCropChange: (crop: CropValues) => void
   onOpenImport: () => void
+  onSort: (key: SortKey) => void
+  onShuffle: () => void
 }
 
 function ChartPicker({
@@ -289,8 +292,11 @@ export default function ControlPanel({
   onCropLive,
   onCropChange,
   onOpenImport,
+  onSort,
+  onShuffle,
 }: Props) {
   const occupiedCount = chart.slots.filter((s) => s != null).length
+  const [sortKey, setSortKey] = useState<SortKey>('type')
 
   return (
     <aside className={styles.panel}>
@@ -498,6 +504,41 @@ export default function ControlPanel({
                 {mode.charAt(0).toUpperCase() + mode.slice(1)}
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionLabel}>Arrange</h2>
+          <div className={styles.row}>
+            <span className={styles.label}>Sort by</span>
+            <select
+              className={styles.arrangeSelect}
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+            >
+              <option value="type">Type</option>
+              <option value="cmc-asc">CMC ↑</option>
+              <option value="cmc-desc">CMC ↓</option>
+              <option value="color">Color</option>
+            </select>
+          </div>
+          <div className={styles.arrangeRow}>
+            <button
+              type="button"
+              className={styles.arrangeBtn}
+              disabled={occupiedCount === 0}
+              onClick={() => onSort(sortKey)}
+            >
+              Sort
+            </button>
+            <button
+              type="button"
+              className={styles.arrangeBtn}
+              disabled={occupiedCount === 0}
+              onClick={onShuffle}
+            >
+              Shuffle
+            </button>
           </div>
         </section>
       </div>

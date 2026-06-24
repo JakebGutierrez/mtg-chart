@@ -16,6 +16,9 @@ function makeSlot(): Slot {
     cropX: 0.5,
     cropY: 0.5,
     cropScale: 1.0,
+    cmc: null,
+    colors: null,
+    typeLine: null,
   }
 }
 

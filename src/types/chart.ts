@@ -20,6 +20,9 @@ export interface Slot {
   cropX: number      // 0–1 normalised horizontal offset, default 0.5
   cropY: number      // 0–1 normalised vertical offset, default 0.5
   cropScale: number  // 1.0 = fit; >1 = zoom in, default 1.0
+  cmc: number | null
+  colors: string[] | null
+  typeLine: string | null
 }
 
 export interface Chart {

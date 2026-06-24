@@ -42,6 +42,8 @@ interface ScryfallImageUris {
 
 interface ScryfallCardFace {
   image_uris?: ScryfallImageUris
+  colors?: string[]
+  type_line?: string
 }
 
 export interface ScryfallCard {
@@ -53,6 +55,9 @@ export interface ScryfallCard {
   released_at: string
   collector_number: string
   layout: string
+  cmc?: number
+  colors?: string[]
+  type_line?: string
   image_uris?: ScryfallImageUris
   card_faces?: ScryfallCardFace[]
 }
@@ -70,6 +75,11 @@ export interface PrintingMeta {
 }
 
 export function normaliseCard(card: ScryfallCard): Slot | null {
+  // Sort fields: cmc is always on the root; colors and type_line may be per-face on DFCs.
+  const cmc: number | null = card.cmc ?? null
+  const colors: string[] | null = card.colors ?? card.card_faces?.[0]?.colors ?? null
+  const typeLine: string | null = card.type_line ?? card.card_faces?.[0]?.type_line ?? null
+
   if (card.card_faces) {
     const facesWithImages = card.card_faces.filter((f) => f.image_uris !== undefined)
 
@@ -94,6 +104,9 @@ export function normaliseCard(card: ScryfallCard): Slot | null {
         cropX: 0.5,
         cropY: 0.5,
         cropScale: 1.0,
+        cmc,
+        colors,
+        typeLine,
       }
     }
     // card_faces present but no per-face image_uris (adventure, split, etc.) — fall through
@@ -115,6 +128,9 @@ export function normaliseCard(card: ScryfallCard): Slot | null {
     cropX: 0.5,
     cropY: 0.5,
     cropScale: 1.0,
+    cmc,
+    colors,
+    typeLine,
   }
 }
 

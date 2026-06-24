@@ -406,3 +406,48 @@
   opacity: 0.3;
   cursor: default;
 }
+
+/* Arrange section */
+.arrangeSelect {
+  padding: 4px 6px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.arrangeSelect:focus {
+  border-color: var(--accent);
+}
+
+.arrangeRow {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.arrangeBtn {
+  flex: 1;
+  padding: 6px 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.arrangeBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.arrangeBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
