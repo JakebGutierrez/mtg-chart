@@ -47,7 +47,7 @@ interface Props {
   onOpenImport: () => void
   onSort: (key: SortKey) => void
   onShuffle: () => void
-  onCopyLink: () => void
+  onCopyLink: () => Promise<void>
 }
 
 function ChartPicker({
@@ -304,9 +304,10 @@ export default function ControlPanel({
 
   function handleCopyLink() {
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-    onCopyLink()
-    setCopied(true)
-    copyTimeoutRef.current = setTimeout(() => setCopied(false), 1500)
+    onCopyLink().then(() => {
+      setCopied(true)
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 1500)
+    }).catch(() => {})
   }
 
   return (

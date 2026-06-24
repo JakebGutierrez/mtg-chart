@@ -34,17 +34,29 @@ function isChartShaped(v: unknown): boolean {
   )
 }
 
+function readStoredCharts(): Chart[] {
+  try {
+    const raw = localStorage.getItem(CHARTS_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isChartShaped)) {
+      return migrateAll(parsed as Chart[])
+    }
+  } catch { /* ignore */ }
+  return []
+}
+
 // Does not call persist() — the useEffect in useCharts handles all writes.
-// Do not add an eager persist() call here; that would re-introduce side effects
-// inside the lazy useState initialiser, which React may invoke more than once.
+// Does not call replaceState — that side effect lives in a post-mount useEffect
+// in useCharts so StrictMode's double-invocation of this initialiser is safe.
 export function loadOrInit(): { charts: Chart[]; activeId: string } {
   const param = new URLSearchParams(window.location.search).get('c')
   if (param) {
     const shared = decodeChart(param)
     if (shared) {
-      window.history.replaceState(null, '', window.location.pathname)
+      const existingCharts = readStoredCharts()
       const chart = { ...shared, id: crypto.randomUUID() }
-      return { charts: [chart], activeId: chart.id }
+      return { charts: [...existingCharts, chart], activeId: chart.id }
     }
   }
 
@@ -85,6 +97,14 @@ export function useCharts(): {
   setActiveId: (id: string) => void
 } {
   const [state, setState] = useState<ChartsState>(loadOrInit)
+
+  // loadOrInit leaves ?c= in the URL so StrictMode's double-invocation sees the
+  // param on both calls. After mount the param is no longer needed — strip it.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('c')) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [])
 
   // Persist after every state change — keeps all setState updaters pure (no side effects).
   useEffect(() => {

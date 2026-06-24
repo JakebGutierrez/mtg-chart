@@ -297,10 +297,10 @@ function App() {
     updateChartWithHistory((prev) => ({ ...prev, slots: shuffleSlots(prev.slots) }))
   }, [updateChartWithHistory])
 
-  const handleCopyLink = useCallback(() => {
+  const handleCopyLink = useCallback((): Promise<void> => {
     const encoded = encodeChart(activeChart)
-    const url = `${window.location.origin}${window.location.pathname}?c=${encoded}`
-    navigator.clipboard.writeText(url).catch(() => {})
+    const url = `${window.location.origin}${window.location.pathname}?c=${encodeURIComponent(encoded)}`
+    return navigator.clipboard.writeText(url)
   }, [activeChart])
 
   const handleFaceToggle = useCallback(
