@@ -56,7 +56,7 @@ describe('loadOrInit', () => {
     const { charts, activeId } = loadOrInit()
     expect(charts).toHaveLength(1)
     expect(activeId).toBe(charts[0].id)
-    expect(charts[0].schemaVersion).toBe(3)
+    expect(charts[0].schemaVersion).toBe(4)
   })
 
   it('restores charts and active ID from valid stored JSON', () => {

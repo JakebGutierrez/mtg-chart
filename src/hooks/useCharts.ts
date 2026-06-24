@@ -3,6 +3,7 @@ import type { Chart } from '@/types/chart'
 import { createDefaultChart } from '@/utils/defaultChart'
 import { migrateAll } from '@/utils/schemaVersion'
 import { decodeChart } from '@/utils/shareLink'
+import { isChartShaped } from '@/utils/chartShape'
 
 const CHARTS_KEY = 'mtg-chart:charts'
 const ACTIVE_ID_KEY = 'mtg-chart:activeId'
@@ -13,25 +14,6 @@ const ACTIVE_ID_KEY = 'mtg-chart:activeId'
 function persist(charts: Chart[], activeId: string): void {
   localStorage.setItem(CHARTS_KEY, JSON.stringify(charts))
   localStorage.setItem(ACTIVE_ID_KEY, activeId)
-}
-
-function isSlotShaped(el: unknown): boolean {
-  if (el === null) return true
-  if (typeof el !== 'object') return false
-  const s = el as Record<string, unknown>
-  return typeof s.scryfallId === 'string' && Array.isArray(s.imageUris)
-}
-
-function isChartShaped(v: unknown): boolean {
-  if (typeof v !== 'object' || v === null) return false
-  const c = v as Record<string, unknown>
-  return (
-    typeof c.id === 'string' &&
-    typeof c.gridRows === 'number' &&
-    typeof c.gridCols === 'number' &&
-    Array.isArray(c.slots) &&
-    (c.slots as unknown[]).every(isSlotShaped)
-  )
 }
 
 function readStoredCharts(): Chart[] {
@@ -46,14 +28,20 @@ function readStoredCharts(): Chart[] {
   return []
 }
 
+// Set to true by loadOrInit when a share-link param is successfully decoded.
+// Module-level so it survives StrictMode's double-invocation of the lazy
+// useState initialiser without needing a ref write inside the initialiser
+// (which the react-hooks/refs rule forbids).
+let _consumedShareParam = false
+
 // Does not call persist() — the useEffect in useCharts handles all writes.
-// Does not call replaceState — that side effect lives in a post-mount useEffect
-// in useCharts so StrictMode's double-invocation of this initialiser is safe.
+// Does not call replaceState — see the post-mount useEffect in useCharts().
 export function loadOrInit(): { charts: Chart[]; activeId: string } {
   const param = new URLSearchParams(window.location.search).get('c')
   if (param) {
     const shared = decodeChart(param)
     if (shared) {
+      _consumedShareParam = true
       const existingCharts = readStoredCharts()
       const chart = { ...shared, id: crypto.randomUUID() }
       return { charts: [...existingCharts, chart], activeId: chart.id }
@@ -98,10 +86,12 @@ export function useCharts(): {
 } {
   const [state, setState] = useState<ChartsState>(loadOrInit)
 
-  // loadOrInit leaves ?c= in the URL so StrictMode's double-invocation sees the
-  // param on both calls. After mount the param is no longer needed — strip it.
+  // Strip ?c= only when loadOrInit actually consumed a valid share link —
+  // a malformed or unrelated param is left in the URL (or more precisely,
+  // _consumedShareParam stays false so we don't touch the URL at all).
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('c')) {
+    if (_consumedShareParam) {
+      _consumedShareParam = false
       window.history.replaceState(null, '', window.location.pathname)
     }
   }, [])
