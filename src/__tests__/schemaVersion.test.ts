@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { migrateAll } from '@/utils/schemaVersion'
-import type { Chart, Slot } from '@/types/chart'
+import type { Chart, Slot, ScryfallSlot } from '@/types/chart'
 
-function makeSlot(overrides: Partial<Slot> = {}): Slot {
+function makeSlot(overrides: Partial<ScryfallSlot> = {}): ScryfallSlot {
   return {
     kind: 'scryfall',
     scryfallId: 'abc',

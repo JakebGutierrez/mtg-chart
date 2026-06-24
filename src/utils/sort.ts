@@ -30,6 +30,9 @@ function colorBucket(colors: string[] | null): number {
 }
 
 function compareSlots(a: Slot, b: Slot, key: SortKey): number {
+  if (a.kind === 'custom' && b.kind === 'custom') return 0
+  if (a.kind === 'custom') return 1
+  if (b.kind === 'custom') return -1
   switch (key) {
     case 'type':
       return typeBucket(a.typeLine) - typeBucket(b.typeLine)

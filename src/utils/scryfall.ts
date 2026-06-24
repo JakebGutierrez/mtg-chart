@@ -1,4 +1,4 @@
-import type { Slot } from '@/types/chart'
+import type { ScryfallSlot } from '@/types/chart'
 
 const API_BASE = 'https://api.scryfall.com'
 
@@ -69,12 +69,12 @@ export interface ScryfallSearchResponse {
 }
 
 export interface PrintingMeta {
-  slot: Slot
+  slot: ScryfallSlot
   setName: string
   year: number
 }
 
-export function normaliseCard(card: ScryfallCard): Slot | null {
+export function normaliseCard(card: ScryfallCard): ScryfallSlot | null {
   // Sort fields: cmc is always on the root; colors and type_line may be per-face on DFCs.
   const cmc: number | null = card.cmc ?? null
   const colors: string[] | null = card.colors ?? card.card_faces?.[0]?.colors ?? null
@@ -144,14 +144,14 @@ export function normalisePrinting(card: ScryfallCard): PrintingMeta | null {
   }
 }
 
-export function normaliseResults(response: ScryfallSearchResponse): Slot[] {
+export function normaliseResults(response: ScryfallSearchResponse): ScryfallSlot[] {
   return response.data.flatMap((card) => {
     const slot = normaliseCard(card)
     return slot ? [slot] : []
   })
 }
 
-export async function fetchCardById(scryfallId: string): Promise<Slot | null> {
+export async function fetchCardById(scryfallId: string): Promise<ScryfallSlot | null> {
   const res = await fetch(`${API_BASE}/cards/${scryfallId}`, { mode: 'cors' })
   if (!res.ok) return null
   const card = (await res.json()) as ScryfallCard

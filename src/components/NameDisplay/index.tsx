@@ -17,9 +17,12 @@ type Props = OverlayProps | SidebarProps
 
 export default function NameDisplay(props: Props) {
   if (props.mode === 'overlay') {
+    const { slot } = props
     return (
       <div className={styles.overlay}>
-        <span className={styles.overlayText}>{props.slot.cardName}</span>
+        <span className={styles.overlayText}>
+          {slot.kind === 'scryfall' ? slot.cardName : slot.label}
+        </span>
       </div>
     )
   }
@@ -32,7 +35,7 @@ export default function NameDisplay(props: Props) {
       const cell = cellMap[r * chart.gridCols + c]
       if (!cell || cell.kind === 'covered') continue
       const slot = getSlot(chart, cell.slotIndex)
-      if (slot) names.push(slot.cardName)
+      if (slot) names.push(slot.kind === 'scryfall' ? slot.cardName : slot.label)
     }
     return names
   })

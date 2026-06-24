@@ -10,7 +10,7 @@ import { useCharts } from '@/hooks/useCharts'
 import { sortSlots, shuffleSlots } from '@/utils/sort'
 import type { SortKey } from '@/utils/sort'
 import { encodeChart } from '@/utils/shareLink'
-import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode, Layout, HeroConfig } from '@/types/chart'
+import type { Chart, Slot, ScryfallSlot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode, Layout, HeroConfig } from '@/types/chart'
 
 type LayoutMode = 'uniform' | 'commander' | 'partner'
 
@@ -307,7 +307,7 @@ function App() {
     (slotIndex: number) => {
       updateChartWithHistory((prev) => {
         const slot = getSlot(prev, slotIndex)
-        if (!slot || slot.imageUris.length <= 1) return prev
+        if (!slot || slot.kind !== 'scryfall' || slot.imageUris.length <= 1) return prev
         const slots = [...prev.slots]
         slots[slotIndex] = {
           ...slot,
@@ -395,10 +395,10 @@ function App() {
 
   // NOT history-tracked: transparent image URI cache refresh on 404 during export.
   const handleSlotImageUpdate = useCallback(
-    (slotIndex: number, imageUris: Slot['imageUris']) => {
+    (slotIndex: number, imageUris: ScryfallSlot['imageUris']) => {
       updateChart((prev) => {
         const slot = getSlot(prev, slotIndex)
-        if (!slot) return prev
+        if (!slot || slot.kind !== 'scryfall') return prev
         const slots = [...prev.slots]
         slots[slotIndex] = { ...slot, imageUris }
         return { ...prev, slots }

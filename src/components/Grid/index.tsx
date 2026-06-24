@@ -181,41 +181,49 @@ export default function GridArea({
                   onDragEnd={() => { dragFromRef.current = null; setDragOver(null) }}
                   onClick={() => onCellSelect(slot ? cell.slotIndex : null)}
                 >
-                  {slot && (
-                    <>
-                      <img
-                        className={styles.cardImg}
-                        src={slot.imageUris[slot.selectedFaceIndex].artCrop}
-                        alt={slot.cardName}
-                        style={{
-                          objectPosition: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
-                          ...(slot.cropScale !== 1.0 && {
-                            transform: `scale(${slot.cropScale})`,
-                            transformOrigin: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
-                          }),
-                        }}
-                      />
-                      {chart.nameDisplayMode === 'overlay' && (
-                        <NameDisplay mode="overlay" slot={slot} />
-                      )}
-                      <button
-                        className={styles.removeBtn}
-                        type="button"
-                        aria-label={`Remove ${slot.cardName}`}
-                        onClick={(e) => { e.stopPropagation(); onSlotClear(cell.slotIndex) }}
-                      >
-                        ×
-                      </button>
-                      <button
-                        className={styles.printingBtn}
-                        type="button"
-                        aria-label={`Switch printing for ${slot.cardName}`}
-                        onClick={(e) => { e.stopPropagation(); setPrintingFor(cell.slotIndex) }}
-                      >
-                        ⇄
-                      </button>
-                    </>
-                  )}
+                  {slot && (() => {
+                    const imgSrc = slot.kind === 'scryfall'
+                      ? slot.imageUris[slot.selectedFaceIndex].artCrop
+                      : slot.localImageDataUrl
+                    const displayName = slot.kind === 'scryfall' ? slot.cardName : slot.label
+                    return (
+                      <>
+                        <img
+                          className={styles.cardImg}
+                          src={imgSrc}
+                          alt={displayName}
+                          style={{
+                            objectPosition: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
+                            ...(slot.cropScale !== 1.0 && {
+                              transform: `scale(${slot.cropScale})`,
+                              transformOrigin: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
+                            }),
+                          }}
+                        />
+                        {chart.nameDisplayMode === 'overlay' && (
+                          <NameDisplay mode="overlay" slot={slot} />
+                        )}
+                        <button
+                          className={styles.removeBtn}
+                          type="button"
+                          aria-label={`Remove ${displayName}`}
+                          onClick={(e) => { e.stopPropagation(); onSlotClear(cell.slotIndex) }}
+                        >
+                          ×
+                        </button>
+                        {slot.kind === 'scryfall' && (
+                          <button
+                            className={styles.printingBtn}
+                            type="button"
+                            aria-label={`Switch printing for ${slot.cardName}`}
+                            onClick={(e) => { e.stopPropagation(); setPrintingFor(cell.slotIndex) }}
+                          >
+                            ⇄
+                          </button>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
               )
             })}
@@ -231,9 +239,11 @@ export default function GridArea({
         <ContextMenu
           position={{ x: contextMenu.x, y: contextMenu.y }}
           onRemove={handleContextRemove}
-          onSwitchPrinting={handleContextSwitchPrinting}
+          onSwitchPrinting={contextMenuSlot.kind === 'scryfall' ? handleContextSwitchPrinting : null}
           onSwitchFace={
-            isMultiFaceLayout(contextMenuSlot.layout) && contextMenuSlot.imageUris.length > 1
+            contextMenuSlot.kind === 'scryfall' &&
+            isMultiFaceLayout(contextMenuSlot.layout) &&
+            contextMenuSlot.imageUris.length > 1
               ? handleContextSwitchFace
               : null
           }
@@ -241,7 +251,7 @@ export default function GridArea({
         />
       )}
 
-      {printingFor !== null && printingSlot !== null && (
+      {printingFor !== null && printingSlot !== null && printingSlot.kind === 'scryfall' && (
         <PrintingSwitcher
           currentSlot={printingSlot}
           onSelect={handlePrintingSelect}

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, type RefObject } from 'react'
-import type { Chart, Slot } from '@/types/chart'
+import type { Chart, ScryfallSlot } from '@/types/chart'
 import { getSlot } from '@/utils/chart'
 import { generateCellMap } from '@/utils/cellMap'
 import { fetchAsBlob, loadImage, FetchError } from '@/utils/imageBlob'
@@ -90,7 +90,7 @@ function drawCoverCrop(
 
 export function useExport(
   chart: Chart,
-  onSlotImageUpdate: (slotIndex: number, imageUris: Slot['imageUris']) => void,
+  onSlotImageUpdate: (slotIndex: number, imageUris: ScryfallSlot['imageUris']) => void,
   gridRef: RefObject<HTMLDivElement | null>,
 ): UseExportResult {
   const [exporting, setExporting] = useState(false)
@@ -149,7 +149,7 @@ export function useExport(
           .filter((c) => c.kind !== 'covered')
           .flatMap((c) => {
             const s = getSlot(chart, c.slotIndex)
-            return s ? [s.cardName] : []
+            return s ? [s.kind === 'scryfall' ? s.cardName : s.label] : []
           })
         sidebarWidth = measureSidebarWidth(names)
         sidebarSection = SIDEBAR_GAP + sidebarWidth
@@ -187,6 +187,12 @@ export function useExport(
 
       for (const cell of filledCells) {
         const slot = getSlot(chart, cell.slotIndex)!
+
+        if (slot.kind === 'custom') {
+          imgBySlot.set(cell.slotIndex, await loadImage(slot.localImageDataUrl))
+          continue
+        }
+
         const artCropUrl = slot.imageUris[slot.selectedFaceIndex].artCrop
 
         let blob: Blob
@@ -281,7 +287,7 @@ export function useExport(
             ctx.fillStyle = TEXT_PRIMARY
             ctx.textAlign = 'left'
             ctx.textBaseline = 'bottom'
-            fillTextTruncated(ctx, slot.cardName, cellX + 6, cellY + dh - 5, dw - 12)
+            fillTextTruncated(ctx, slot.kind === 'scryfall' ? slot.cardName : slot.label, cellX + 6, cellY + dh - 5, dw - 12)
           }
         } else {
           ctx.fillStyle = BG_CELL
@@ -330,7 +336,7 @@ export function useExport(
             if (cell.kind === 'covered') return
             if (!spannedRows.has(Math.floor(idx / cols))) return
             const s = getSlot(chart, cell.slotIndex)
-            if (s) names.push(s.cardName)
+            if (s) names.push(s.kind === 'scryfall' ? s.cardName : s.label)
           })
           if (names.length === 0) continue
 

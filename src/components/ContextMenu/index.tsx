@@ -5,7 +5,7 @@ import styles from './ContextMenu.module.css'
 interface Props {
   position: { x: number; y: number }
   onRemove: () => void
-  onSwitchPrinting: () => void
+  onSwitchPrinting: (() => void) | null
   onSwitchFace: (() => void) | null
   onClose: () => void
 }
@@ -38,9 +38,11 @@ export default function ContextMenu({ position, onRemove, onSwitchPrinting, onSw
       <button className={styles.item} type="button" onClick={onRemove}>
         Remove
       </button>
-      <button className={styles.item} type="button" onClick={onSwitchPrinting}>
-        Switch Printing
-      </button>
+      {onSwitchPrinting && (
+        <button className={styles.item} type="button" onClick={onSwitchPrinting}>
+          Switch Printing
+        </button>
+      )}
       {onSwitchFace && (
         <button className={styles.item} type="button" onClick={onSwitchFace}>
           Switch Face

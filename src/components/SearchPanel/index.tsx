@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import type { Chart, Slot } from '@/types/chart'
+import { useState, useMemo, useRef, useCallback } from 'react'
+import type { Chart, Slot, CustomSlot } from '@/types/chart'
 import { useScryfall } from '@/hooks/useScryfall'
 import { getSlot } from '@/utils/chart'
 import { generateCellMap } from '@/utils/cellMap'
@@ -13,6 +13,36 @@ interface Props {
 export default function SearchPanel({ chart, onSlotFill }: Props) {
   const [query, setQuery] = useState('')
   const { results, isLoading, error } = useScryfall(query)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleUploadClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (!file) return
+      if (!['image/jpeg', 'image/png'].includes(file.type)) return
+      const reader = new FileReader()
+      reader.onerror = () => console.error('FileReader failed', reader.error)
+      reader.onload = () => {
+        if (typeof reader.result !== 'string') return
+        const slot: CustomSlot = {
+          kind: 'custom',
+          label: file.name.replace(/\.[^.]+$/, ''),
+          localImageDataUrl: reader.result,
+          cropX: 0.5,
+          cropY: 0.5,
+          cropScale: 1.0,
+        }
+        onSlotFill(slot)
+      }
+      reader.readAsDataURL(file)
+    },
+    [onSlotFill],
+  )
 
   const cellMap = useMemo(
     () => generateCellMap(chart.gridRows, chart.gridCols, chart.heroConfig),
@@ -30,6 +60,21 @@ export default function SearchPanel({ chart, onSlotFill }: Props) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         aria-label="Search cards"
+      />
+      <button
+        className={styles.uploadBtn}
+        type="button"
+        disabled={isFull}
+        onClick={handleUploadClick}
+      >
+        Upload image
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
       />
 
       {isLoading && <p className={styles.status}>Searching…</p>}

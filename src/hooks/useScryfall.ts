@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Slot } from '@/types/chart'
+import type { ScryfallSlot } from '@/types/chart'
 import { buildSearchUrl, normaliseResults } from '@/utils/scryfall'
 import type { ScryfallSearchResponse } from '@/utils/scryfall'
 
 interface UseScryfallResult {
-  results: Slot[]
+  results: ScryfallSlot[]
   isLoading: boolean
   error: string | null
 }
 
 export function useScryfall(query: string): UseScryfallResult {
-  const [results, setResults] = useState<Slot[]>([])
+  const [results, setResults] = useState<ScryfallSlot[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

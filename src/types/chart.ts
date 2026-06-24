@@ -4,7 +4,7 @@ export type DisplayMode = 'landscape' | 'square'
 export type NameDisplayMode = 'none' | 'sidebar' | 'overlay'
 export type HeroConfig = Array<{ row: number; col: number; rowSpan: number; colSpan: number }>
 
-export interface Slot {
+export interface ScryfallSlot {
   kind: 'scryfall'
   scryfallId: string
   oracleId: string
@@ -24,6 +24,17 @@ export interface Slot {
   colors: string[] | null
   typeLine: string | null
 }
+
+export interface CustomSlot {
+  kind: 'custom'
+  label: string
+  localImageDataUrl: string
+  cropX: number
+  cropY: number
+  cropScale: number
+}
+
+export type Slot = ScryfallSlot | CustomSlot
 
 export interface Chart {
   id: string

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Slot } from '@/types/chart'
+import type { Slot, ScryfallSlot } from '@/types/chart'
 import {
   buildPrintingsUrl,
   normalisePrinting,
@@ -10,7 +10,7 @@ import {
 import styles from './PrintingSwitcher.module.css'
 
 interface Props {
-  currentSlot: Slot
+  currentSlot: ScryfallSlot
   onSelect: (updated: Slot) => void
   onClose: () => void
 }

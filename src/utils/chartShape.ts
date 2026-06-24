@@ -2,7 +2,19 @@ function isSlotShaped(el: unknown): boolean {
   if (el === null) return true
   if (typeof el !== 'object') return false
   const s = el as Record<string, unknown>
-  return typeof s.scryfallId === 'string' && Array.isArray(s.imageUris)
+  if (s.kind === 'scryfall') {
+    return typeof s.scryfallId === 'string' && Array.isArray(s.imageUris)
+  }
+  if (s.kind === 'custom') {
+    return (
+      typeof s.localImageDataUrl === 'string' &&
+      typeof s.label === 'string' &&
+      typeof s.cropX === 'number' &&
+      typeof s.cropY === 'number' &&
+      typeof s.cropScale === 'number'
+    )
+  }
+  return false
 }
 
 export function isChartShaped(v: unknown): boolean {

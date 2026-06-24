@@ -226,8 +226,8 @@ function CropEditor({
       >
         <img
           className={styles.cropPreviewImg}
-          src={slot.imageUris[slot.selectedFaceIndex].artCrop}
-          alt={slot.cardName}
+          src={slot.kind === 'scryfall' ? slot.imageUris[slot.selectedFaceIndex].artCrop : slot.localImageDataUrl}
+          alt={slot.kind === 'scryfall' ? slot.cardName : slot.label}
           draggable={false}
           style={{
             objectPosition: `${slot.cropX * 100}% ${slot.cropY * 100}%`,
@@ -344,7 +344,7 @@ export default function ControlPanel({
 
         {selectedSlot && (
           <section className={styles.section}>
-            <h2 className={styles.sectionLabel}>Crop — {selectedSlot.cardName}</h2>
+            <h2 className={styles.sectionLabel}>Crop — {selectedSlot.kind === 'scryfall' ? selectedSlot.cardName : selectedSlot.label}</h2>
             <CropEditor
               slot={selectedSlot}
               displayMode={chart.displayMode}
