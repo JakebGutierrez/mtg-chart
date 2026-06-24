@@ -22,11 +22,11 @@ function typeBucket(typeLine: string | null): number {
 const COLOR_ORDER = ['W', 'U', 'B', 'R', 'G']
 
 function colorBucket(colors: string[] | null): number {
-  if (colors === null) return 6
-  if (colors.length === 0) return 5
-  if (colors.length > 1) return 4
+  if (colors === null) return 7
+  if (colors.length === 0) return 6
+  if (colors.length > 1) return 5
   const idx = COLOR_ORDER.indexOf(colors[0])
-  return idx === -1 ? 6 : idx
+  return idx === -1 ? 7 : idx
 }
 
 function compareSlots(a: Slot, b: Slot, key: SortKey): number {

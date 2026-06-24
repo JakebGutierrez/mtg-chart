@@ -43,9 +43,9 @@ function migrate(chart: Chart): Chart {
         const s = slot as Slot & { cmc?: number | null; colors?: string[] | null; typeLine?: string | null }
         return {
           ...s,
-          cmc: s.cmc !== undefined ? s.cmc : null,
-          colors: s.colors !== undefined ? s.colors : null,
-          typeLine: s.typeLine !== undefined ? s.typeLine : null,
+          cmc: s.cmc ?? null,
+          colors: s.colors ?? null,
+          typeLine: s.typeLine ?? null,
         }
       }),
     }
