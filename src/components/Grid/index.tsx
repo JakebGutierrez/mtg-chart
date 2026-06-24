@@ -38,8 +38,8 @@ export default function GridArea({
   onDismissWarning,
 }: Props) {
   const cellMap = useMemo(
-    () => generateCellMap(chart.gridRows, chart.gridCols),
-    [chart.gridRows, chart.gridCols],
+    () => generateCellMap(chart.gridRows, chart.gridCols, chart.heroConfig),
+    [chart.gridRows, chart.gridCols, chart.heroConfig],
   )
 
   const [contextMenu, setContextMenu] = useState<{
@@ -154,7 +154,13 @@ export default function GridArea({
                 <div
                   key={cell.slotIndex}
                   className={cellClass}
-                  style={{ borderRadius: chart.cornerRadius }}
+                  style={{
+                    borderRadius: chart.cornerRadius,
+                    ...(cell.kind === 'hero' && {
+                      gridRow: `span ${cell.rowSpan}`,
+                      gridColumn: `span ${cell.colSpan}`,
+                    }),
+                  }}
                   onContextMenu={
                     slot ? (e) => handleCellContextMenu(e, cell.slotIndex) : undefined
                   }

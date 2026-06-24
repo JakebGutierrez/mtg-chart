@@ -139,11 +139,12 @@ export function useExport(
         ? TITLE_FONT_SIZE * TITLE_LINE_HEIGHT + TITLE_PADDING_BOTTOM
         : 0
 
+      const cellMap = generateCellMap(rows, cols, chart.heroConfig)
+
       // Sidebar width measured before preflight so innerW is accurate
       let sidebarWidth = 0
       let sidebarSection = 0
       if (chart.nameDisplayMode === 'sidebar') {
-        const cellMap = generateCellMap(rows, cols)
         const names = cellMap
           .filter((c) => c.kind !== 'covered')
           .flatMap((c) => {
@@ -177,7 +178,6 @@ export function useExport(
       const exportH = Math.round((innerH + 2 * padding) * finalScale)
 
       // Pre-fetch blobs with 404 recovery
-      const cellMap = generateCellMap(rows, cols)
       const filledCells = cellMap.filter(
         (c): c is Exclude<(typeof cellMap)[number], { kind: 'covered' }> =>
           c.kind !== 'covered' && getSlot(chart, c.slotIndex) !== null,
@@ -248,51 +248,53 @@ export function useExport(
       const gridOriginX = padding
       const gridOriginY = padding + titleHeight
 
-      // Cells
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const slotIndex = r * cols + c
-          const cellX = gridOriginX + c * (cellW + gap)
-          const cellY = gridOriginY + r * (cellH + gap)
-          const slot = getSlot(chart, slotIndex)
-          const img = imgBySlot.get(slotIndex)
+      // Cells — cellMap-driven so hero cells span correctly and covered cells are skipped
+      cellMap.forEach((cell, idx) => {
+        if (cell.kind === 'covered') return
+        const mapRow = Math.floor(idx / cols)
+        const mapCol = idx % cols
+        const cellX = gridOriginX + mapCol * (cellW + gap)
+        const cellY = gridOriginY + mapRow * (cellH + gap)
+        const dw = cell.kind === 'hero' ? cell.colSpan * cellW + (cell.colSpan - 1) * gap : cellW
+        const dh = cell.kind === 'hero' ? cell.rowSpan * cellH + (cell.rowSpan - 1) * gap : cellH
+        const slot = getSlot(chart, cell.slotIndex)
+        const img = imgBySlot.get(cell.slotIndex)
 
-          ctx.save()
-          ctx.beginPath()
-          ctx.roundRect(cellX, cellY, cellW, cellH, chart.cornerRadius)
+        ctx.save()
+        ctx.beginPath()
+        ctx.roundRect(cellX, cellY, dw, dh, chart.cornerRadius)
 
-          if (slot && img) {
-            ctx.clip()
-            drawCoverCrop(ctx, img, cellX, cellY, cellW, cellH, slot.cropX, slot.cropY, slot.cropScale)
+        if (slot && img) {
+          ctx.clip()
+          drawCoverCrop(ctx, img, cellX, cellY, dw, dh, slot.cropX, slot.cropY, slot.cropScale)
 
-            if (chart.nameDisplayMode === 'overlay') {
-              const overlayH = 20 + OVERLAY_FONT_SIZE * 1.5 + 5
-              const gradY = cellY + cellH - overlayH
-              const grad = ctx.createLinearGradient(0, gradY, 0, cellY + cellH)
-              grad.addColorStop(0, 'transparent')
-              grad.addColorStop(1, OVERLAY_BG)
-              ctx.fillStyle = grad
-              ctx.fillRect(cellX, gradY, cellW, overlayH)
+          if (chart.nameDisplayMode === 'overlay') {
+            const overlayH = 20 + OVERLAY_FONT_SIZE * 1.5 + 5
+            const gradY = cellY + dh - overlayH
+            const grad = ctx.createLinearGradient(0, gradY, 0, cellY + dh)
+            grad.addColorStop(0, 'transparent')
+            grad.addColorStop(1, OVERLAY_BG)
+            ctx.fillStyle = grad
+            ctx.fillRect(cellX, gradY, dw, overlayH)
 
-              ctx.font = `${OVERLAY_FONT_SIZE}px ${BODY_FONT}`
-              ctx.fillStyle = TEXT_PRIMARY
-              ctx.textAlign = 'left'
-              ctx.textBaseline = 'bottom'
-              fillTextTruncated(ctx, slot.cardName, cellX + 6, cellY + cellH - 5, cellW - 12)
-            }
-          } else {
-            ctx.fillStyle = BG_CELL
-            ctx.fill()
-            ctx.strokeStyle = BORDER_CELL
-            ctx.lineWidth = 1
-            ctx.stroke()
+            ctx.font = `${OVERLAY_FONT_SIZE}px ${BODY_FONT}`
+            ctx.fillStyle = TEXT_PRIMARY
+            ctx.textAlign = 'left'
+            ctx.textBaseline = 'bottom'
+            fillTextTruncated(ctx, slot.cardName, cellX + 6, cellY + dh - 5, dw - 12)
           }
-
-          ctx.restore()
+        } else {
+          ctx.fillStyle = BG_CELL
+          ctx.fill()
+          ctx.strokeStyle = BORDER_CELL
+          ctx.lineWidth = 1
+          ctx.stroke()
         }
-      }
 
-      // Sidebar
+        ctx.restore()
+      })
+
+      // Sidebar — group by origin row, use hero span height when present
       if (chart.nameDisplayMode === 'sidebar') {
         const sidebarX = gridOriginX + totalGridW + SIDEBAR_GAP
         const lineH = SIDEBAR_FONT_SIZE * SIDEBAR_LINE_HEIGHT
@@ -302,21 +304,43 @@ export function useExport(
         ctx.textAlign = 'left'
         ctx.textBaseline = 'top'
 
-        for (let r = 0; r < rows; r++) {
-          const names: string[] = []
-          for (let c = 0; c < cols; c++) {
-            const s = getSlot(chart, r * cols + c)
-            if (s) names.push(s.cardName)
+        // Hero rows can span multiple grid rows. To avoid overlapping sidebar clip rects,
+        // interior spanned rows are folded into the hero-origin row's name block instead
+        // of being emitted as separate entries.
+        const heroRowSpan = new Map<number, number>()
+        cellMap.forEach((cell, idx) => {
+          if (cell.kind === 'hero') {
+            const mapRow = Math.floor(idx / cols)
+            heroRowSpan.set(mapRow, Math.max(heroRowSpan.get(mapRow) ?? 1, cell.rowSpan))
           }
+        })
+
+        for (let r = 0; r < rows; r++) {
+          const isInterior = [...heroRowSpan.entries()].some(
+            ([originRow, span]) => r > originRow && r < originRow + span,
+          )
+          if (isInterior) continue
+
+          const span = heroRowSpan.get(r) ?? 1
+          const spannedRows = new Set(Array.from({ length: span }, (_, i) => r + i))
+          const rowClipH = span * cellH + (span - 1) * gap
+
+          const names: string[] = []
+          cellMap.forEach((cell, idx) => {
+            if (cell.kind === 'covered') return
+            if (!spannedRows.has(Math.floor(idx / cols))) return
+            const s = getSlot(chart, cell.slotIndex)
+            if (s) names.push(s.cardName)
+          })
           if (names.length === 0) continue
 
           const rowY = gridOriginY + r * (cellH + gap)
           const blockH = names.length * lineH
-          const blockY = rowY + (cellH - blockH) / 2
+          const blockY = rowY + Math.max(0, (rowClipH - blockH) / 2)
 
           ctx.save()
           ctx.beginPath()
-          ctx.rect(sidebarX, rowY, sidebarWidth, cellH)
+          ctx.rect(sidebarX, rowY, sidebarWidth, rowClipH)
           ctx.clip()
 
           names.forEach((name, i) => {

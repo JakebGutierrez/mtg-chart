@@ -27,6 +27,7 @@ function makeChart(slots: Array<Slot | null>): Chart {
     gridRows: 3,
     gridCols: 3,
     layout: 'uniform',
+    heroConfig: [],
     displayMode: 'landscape',
     nameDisplayMode: 'none',
     title: '',

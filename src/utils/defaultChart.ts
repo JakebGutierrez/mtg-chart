@@ -4,10 +4,11 @@ export function createDefaultChart(): Chart {
   return {
     id: crypto.randomUUID(),
     name: 'My Chart',
-    schemaVersion: 2,
+    schemaVersion: 3,
     gridRows: 5,
     gridCols: 5,
     layout: 'uniform',
+    heroConfig: [],
     displayMode: 'landscape',
     nameDisplayMode: 'none',
     title: '',

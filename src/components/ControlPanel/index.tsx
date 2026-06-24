@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import type { Chart, Slot, NumericStyleField, NameDisplayMode, DisplayMode } from '@/types/chart'
+import type { Chart, Slot, NumericStyleField, NameDisplayMode, DisplayMode, HeroConfig } from '@/types/chart'
+
+type LayoutMode = 'uniform' | 'commander' | 'partner'
+
+function getLayoutMode(heroConfig: HeroConfig): LayoutMode {
+  if (heroConfig.length === 0) return 'uniform'
+  if (heroConfig.length >= 2) return 'partner'
+  return 'commander'
+}
 import type { ExportScale } from '@/hooks/useExport'
 import SearchPanel from '@/components/SearchPanel'
 import Stepper from '@/components/Stepper'
@@ -18,6 +26,7 @@ interface Props {
   onTitleChange: (value: string) => void
   onNameDisplayChange: (mode: NameDisplayMode) => void
   onDisplayModeChange: (mode: DisplayMode) => void
+  onLayoutModeChange: (mode: LayoutMode) => void
   onSelectChart: (id: string) => void
   onCreateChart: () => void
   onDeleteChart: (id: string) => void
@@ -262,6 +271,7 @@ export default function ControlPanel({
   onTitleChange,
   onNameDisplayChange,
   onDisplayModeChange,
+  onLayoutModeChange,
   onSelectChart,
   onCreateChart,
   onDeleteChart,
@@ -330,6 +340,26 @@ export default function ControlPanel({
         <section className={styles.section}>
           <h2 className={styles.sectionLabel}>Grid</h2>
           <div className={styles.row}>
+            <span className={styles.label}>Layout</span>
+            <div className={styles.segmented} role="radiogroup" aria-label="Layout mode">
+              {(['uniform', 'commander', 'partner'] as const).map((mode) => {
+                const active = getLayoutMode(chart.heroConfig) === mode
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={`${styles.segBtn}${active ? ` ${styles.segBtnActive}` : ''}`}
+                    onClick={() => onLayoutModeChange(mode)}
+                  >
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div className={styles.row}>
             <span className={styles.label}>Width</span>
             <Stepper
               value={chart.gridCols}
@@ -338,7 +368,9 @@ export default function ControlPanel({
               decrementLabel="Decrease columns"
               incrementLabel="Increase columns"
               decrementDisabled={
-                chart.gridCols <= 1 || occupiedCount > chart.gridRows * (chart.gridCols - 1)
+                chart.gridCols <= 1 ||
+                occupiedCount > chart.gridRows * (chart.gridCols - 1) ||
+                chart.heroConfig.some((h) => h.col + h.colSpan > chart.gridCols - 1)
               }
               onDecrement={() => onGridResize('cols', -1)}
               onIncrement={() => onGridResize('cols', 1)}
@@ -353,7 +385,9 @@ export default function ControlPanel({
               decrementLabel="Decrease rows"
               incrementLabel="Increase rows"
               decrementDisabled={
-                chart.gridRows <= 1 || occupiedCount > (chart.gridRows - 1) * chart.gridCols
+                chart.gridRows <= 1 ||
+                occupiedCount > (chart.gridRows - 1) * chart.gridCols ||
+                chart.heroConfig.some((h) => h.row + h.rowSpan > chart.gridRows - 1)
               }
               onDecrement={() => onGridResize('rows', -1)}
               onIncrement={() => onGridResize('rows', 1)}

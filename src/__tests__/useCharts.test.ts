@@ -29,6 +29,7 @@ function makeStoredChart(overrides: Partial<Chart> = {}): Chart {
     gridRows: 4,
     gridCols: 4,
     layout: 'uniform',
+    heroConfig: [],
     displayMode: 'landscape',
     nameDisplayMode: 'none',
     title: '',
@@ -55,7 +56,7 @@ describe('loadOrInit', () => {
     const { charts, activeId } = loadOrInit()
     expect(charts).toHaveLength(1)
     expect(activeId).toBe(charts[0].id)
-    expect(charts[0].schemaVersion).toBe(2)
+    expect(charts[0].schemaVersion).toBe(3)
   })
 
   it('restores charts and active ID from valid stored JSON', () => {

@@ -28,6 +28,7 @@ function makeChart(overrides: Partial<Chart> = {}): Chart {
     gridRows: 3,
     gridCols: 3,
     layout: 'uniform',
+    heroConfig: [],
     displayMode: 'landscape',
     nameDisplayMode: 'none',
     title: '',
@@ -41,10 +42,10 @@ function makeChart(overrides: Partial<Chart> = {}): Chart {
 }
 
 describe('migrateAll', () => {
-  it('returns charts unchanged when schemaVersion is current (2)', () => {
-    const chart = makeChart({ schemaVersion: 2 })
+  it('returns charts unchanged when schemaVersion is current (3)', () => {
+    const chart = makeChart({ schemaVersion: 3 })
     const result = migrateAll([chart])
-    expect(result[0]).toEqual({ ...chart, schemaVersion: 2 })
+    expect(result[0]).toEqual({ ...chart, schemaVersion: 3 })
   })
 
   it('logs a warning and returns chart as-is when schemaVersion is higher than current', () => {
@@ -60,17 +61,38 @@ describe('migrateAll', () => {
     expect(migrateAll([])).toEqual([])
   })
 
-  it('sets schemaVersion to 2 on all charts in the array', () => {
-    const charts = [makeChart({ id: 'a', schemaVersion: 2 }), makeChart({ id: 'b', schemaVersion: 2 })]
+  it('sets schemaVersion to 3 on all charts in the array', () => {
+    const charts = [makeChart({ id: 'a', schemaVersion: 3 }), makeChart({ id: 'b', schemaVersion: 3 })]
     const result = migrateAll(charts)
-    expect(result.every((c) => c.schemaVersion === 2)).toBe(true)
+    expect(result.every((c) => c.schemaVersion === 3)).toBe(true)
+  })
+
+  describe('v2 → v3 migration', () => {
+    it('bumps schemaVersion from 2 to 3', () => {
+      const chart = makeChart({ schemaVersion: 2 })
+      const [result] = migrateAll([chart])
+      expect(result.schemaVersion).toBe(3)
+    })
+
+    it('adds heroConfig: [] when missing', () => {
+      const chart = makeChart({ schemaVersion: 2 })
+      const [result] = migrateAll([chart])
+      expect(result.heroConfig).toEqual([])
+    })
+
+    it('preserves existing heroConfig when present', () => {
+      const existing = [{ row: 0, col: 0, rowSpan: 2, colSpan: 2 }]
+      const chart = makeChart({ schemaVersion: 2, heroConfig: existing })
+      const [result] = migrateAll([chart])
+      expect(result.heroConfig).toEqual(existing)
+    })
   })
 
   describe('v1 → v2 migration', () => {
-    it('bumps schemaVersion from 1 to 2', () => {
+    it('bumps schemaVersion from 1 to 3 (runs both migrations)', () => {
       const chart = makeChart({ schemaVersion: 1 })
       const [result] = migrateAll([chart])
-      expect(result.schemaVersion).toBe(2)
+      expect(result.schemaVersion).toBe(3)
     })
 
     it('adds crop defaults to filled slots that lack them', () => {

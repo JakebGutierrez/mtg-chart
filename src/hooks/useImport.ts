@@ -36,7 +36,7 @@ interface Assignment {
 }
 
 function getEmptySlotIndices(chart: Chart): number[] {
-  const cellMap = generateCellMap(chart.gridRows, chart.gridCols)
+  const cellMap = generateCellMap(chart.gridRows, chart.gridCols, chart.heroConfig)
   return cellMap
     .filter((c): c is Exclude<CellDef, { kind: 'covered' }> => c.kind !== 'covered')
     .filter((c) => getSlot(chart, c.slotIndex) === null)

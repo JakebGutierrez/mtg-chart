@@ -2,6 +2,7 @@ export type Layout = 'uniform' | 'hybrid'
 export type NumericStyleField = keyof Pick<Chart, 'cellGap' | 'padding' | 'cornerRadius'>
 export type DisplayMode = 'landscape' | 'square'
 export type NameDisplayMode = 'none' | 'sidebar' | 'overlay'
+export type HeroConfig = Array<{ row: number; col: number; rowSpan: number; colSpan: number }>
 
 export interface Slot {
   kind: 'scryfall'
@@ -28,6 +29,7 @@ export interface Chart {
   gridRows: number
   gridCols: number
   layout: Layout
+  heroConfig: HeroConfig
   displayMode: DisplayMode
   nameDisplayMode: NameDisplayMode
   title: string

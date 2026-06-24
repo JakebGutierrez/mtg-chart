@@ -7,7 +7,21 @@ import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
 import { useExport } from '@/hooks/useExport'
 import { useCharts } from '@/hooks/useCharts'
-import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode } from '@/types/chart'
+import type { Chart, Slot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode, Layout, HeroConfig } from '@/types/chart'
+
+type LayoutMode = 'uniform' | 'commander' | 'partner'
+
+const COMMANDER_HERO_CONFIG: HeroConfig = [{ row: 0, col: 0, rowSpan: 2, colSpan: 2 }]
+const PARTNER_HERO_CONFIG: HeroConfig = [
+  { row: 0, col: 0, rowSpan: 2, colSpan: 1 },
+  { row: 0, col: 1, rowSpan: 2, colSpan: 1 },
+]
+
+function getLayoutMode(heroConfig: HeroConfig): LayoutMode {
+  if (heroConfig.length === 0) return 'uniform'
+  if (heroConfig.length >= 2) return 'partner'
+  return 'commander'
+}
 
 const STYLE_LIMITS: Record<NumericStyleField, [min: number, max: number]> = {
   cellGap: [0, 32],
@@ -137,7 +151,7 @@ function App() {
   const handleSlotFill = useCallback(
     (slot: Slot) => {
       updateChartWithHistory((prev) => {
-        const cellMap = generateCellMap(prev.gridRows, prev.gridCols)
+        const cellMap = generateCellMap(prev.gridRows, prev.gridCols, prev.heroConfig)
         const target = cellMap.find(
           (c): c is Exclude<CellDef, { kind: 'covered' }> =>
             c.kind !== 'covered' && getSlot(prev, c.slotIndex) === null,
@@ -188,8 +202,10 @@ function App() {
         const newRows = dimension === 'rows' ? prev.gridRows + delta : prev.gridRows
         const newCols = dimension === 'cols' ? prev.gridCols + delta : prev.gridCols
         if (newRows < 1 || newRows > 10 || newCols < 1 || newCols > 10) return prev
+        // Block shrink if any hero would extend beyond the new grid dimensions
+        if (prev.heroConfig.some((h) => h.row + h.rowSpan > newRows || h.col + h.colSpan > newCols)) return prev
         if (delta === -1) {
-          const cellMap = generateCellMap(prev.gridRows, prev.gridCols)
+          const cellMap = generateCellMap(prev.gridRows, prev.gridCols, prev.heroConfig)
           const cards = cellMap
             .filter((c): c is Exclude<CellDef, { kind: 'covered' }> => c.kind !== 'covered')
             .map((c) => getSlot(prev, c.slotIndex))
@@ -251,6 +267,20 @@ function App() {
       updateChartWithHistory((prev) => ({ ...prev, displayMode: mode }))
     },
     [updateChartWithHistory],
+  )
+
+  const handleLayoutModeChange = useCallback(
+    (mode: LayoutMode) => {
+      if (getLayoutMode(activeChart.heroConfig) === mode) return
+      const hasCards = activeChart.slots.some((s) => s !== null)
+      if (hasCards && !window.confirm('Changing the layout will clear all placed cards. Continue?')) return
+      const heroConfig = mode === 'commander' ? COMMANDER_HERO_CONFIG
+        : mode === 'partner' ? PARTNER_HERO_CONFIG
+        : []
+      const layout: Layout = mode === 'uniform' ? 'uniform' : 'hybrid'
+      updateChartWithHistory((prev) => ({ ...prev, heroConfig, layout, slots: [] }))
+    },
+    [activeChart, updateChartWithHistory],
   )
 
   const handleFaceToggle = useCallback(
@@ -385,6 +415,7 @@ function App() {
         onTitleChange={handleTitleChange}
         onNameDisplayChange={handleNameDisplayChange}
         onDisplayModeChange={handleDisplayModeChange}
+        onLayoutModeChange={handleLayoutModeChange}
         onSelectChart={handleSelectChart}
         onCreateChart={handleCreateChart}
         onDeleteChart={handleDeleteChart}

@@ -1,6 +1,6 @@
-import type { Chart, Slot } from '@/types/chart'
+import type { Chart, HeroConfig, Slot } from '@/types/chart'
 
-const CURRENT_SCHEMA_VERSION = 2
+const CURRENT_SCHEMA_VERSION = 3
 
 function migrate(chart: Chart): Chart {
   if (chart.schemaVersion > CURRENT_SCHEMA_VERSION) {
@@ -23,6 +23,14 @@ function migrate(chart: Chart): Chart {
         const s = slot as Slot & { cropX?: number; cropY?: number; cropScale?: number }
         return { ...s, cropX: s.cropX ?? 0.5, cropY: s.cropY ?? 0.5, cropScale: s.cropScale ?? 1.0 }
       }),
+    }
+  }
+
+  if (c.schemaVersion < 3) {
+    c = {
+      ...c,
+      schemaVersion: 3,
+      heroConfig: (c as Chart & { heroConfig?: HeroConfig }).heroConfig ?? [],
     }
   }
 

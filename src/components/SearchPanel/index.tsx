@@ -15,8 +15,8 @@ export default function SearchPanel({ chart, onSlotFill }: Props) {
   const { results, isLoading, error } = useScryfall(query)
 
   const cellMap = useMemo(
-    () => generateCellMap(chart.gridRows, chart.gridCols),
-    [chart.gridRows, chart.gridCols],
+    () => generateCellMap(chart.gridRows, chart.gridCols, chart.heroConfig),
+    [chart.gridRows, chart.gridCols, chart.heroConfig],
   )
   const fillableCells = useMemo(() => cellMap.filter((c) => c.kind !== 'covered'), [cellMap])
   const isFull = fillableCells.every((c) => getSlot(chart, c.slotIndex) !== null)
