@@ -90,6 +90,23 @@
   color: var(--accent);
 }
 
+.importBtn {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.importBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .pickerList {
   list-style: none;
   margin: 0;

@@ -332,13 +332,11 @@ export default function ControlPanel({
           <div className={styles.pickerHeader}>
             <h2 className={styles.sectionLabel}>Search</h2>
             <button
-              className={styles.pickerAdd}
+              className={styles.importBtn}
               type="button"
-              title="Import decklist"
-              aria-label="Import decklist"
               onClick={onOpenImport}
             >
-              ↑
+              Import decklist
             </button>
           </div>
           <SearchPanel chart={chart} onSlotFill={onSlotFill} />
