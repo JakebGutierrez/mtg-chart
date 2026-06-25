@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { loadOrInit } from '@/hooks/useCharts'
 import type { Chart } from '@/types/chart'
