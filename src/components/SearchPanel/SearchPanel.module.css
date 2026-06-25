@@ -57,6 +57,12 @@
   cursor: default;
 }
 
+.uploadHint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
 .results {
   list-style: none;
   display: flex;

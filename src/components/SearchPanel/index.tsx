@@ -69,6 +69,7 @@ export default function SearchPanel({ chart, onSlotFill }: Props) {
       >
         Upload image
       </button>
+      <p className={styles.uploadHint}>Label is taken from the filename.</p>
       <input
         ref={fileInputRef}
         type="file"
