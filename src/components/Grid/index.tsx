@@ -227,6 +227,18 @@ export default function GridArea({
                             ⇄
                           </button>
                         )}
+                        {slot.kind === 'scryfall' &&
+                          isMultiFaceLayout(slot.layout) &&
+                          slot.imageUris.length > 1 && (
+                          <button
+                            className={styles.flipBtn}
+                            type="button"
+                            aria-label={`Flip ${slot.cardName}`}
+                            onClick={(e) => { e.stopPropagation(); onFaceToggle(cell.slotIndex) }}
+                          >
+                            ↺
+                          </button>
+                        )}
                       </>
                     )
                   })()}

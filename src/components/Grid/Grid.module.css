@@ -175,6 +175,36 @@
   background: var(--overlay-bg-hover);
 }
 
+.flipBtn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: var(--overlay-bg);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cell:hover .flipBtn,
+.flipBtn:focus-visible {
+  opacity: 1;
+}
+
+.flipBtn:hover {
+  background: var(--overlay-bg-hover);
+}
+
 .cardImg {
   display: block;
   width: 100%;
