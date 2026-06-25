@@ -83,7 +83,18 @@
 
 .grid {
   display: grid;
+  width: clamp(400px, 70vw, 900px);
   /* gap is set as an inline style from chart.cellGap */
+}
+
+/* Mobile: drop the 400px floor so the chart fits a phone, tighten padding */
+@media (max-width: 768px) {
+  .area {
+    padding: 60px 12px 12px;
+  }
+  .grid {
+    width: min(92vw, 900px);
+  }
 }
 
 .cell {

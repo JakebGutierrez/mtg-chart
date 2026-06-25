@@ -133,7 +133,6 @@ export default function GridArea({
               gridTemplateRows: `repeat(${chart.gridRows}, 1fr)`,
               gridTemplateColumns: `repeat(${chart.gridCols}, 1fr)`,
               gap: chart.cellGap,
-              width: 'clamp(400px, 70vw, 900px)',
             }}
           >
             {cellMap.map((cell) => {
@@ -159,6 +158,13 @@ export default function GridArea({
                     ...(cell.kind === 'hero' && {
                       gridRow: `span ${cell.rowSpan}`,
                       gridColumn: `span ${cell.colSpan}`,
+                      // The base .cell aspect-ratio assumes a 1x1 cell. A hero spans
+                      // multiple tracks, so its ratio must scale by span or it collapses
+                      // to single-cell height (only commander 2x2 happens to match).
+                      // Note: ignores cellGap, so heroes are off by the gap when gap > 0.
+                      aspectRatio: isSquare
+                        ? `${cell.colSpan} / ${cell.rowSpan}`
+                        : `${cell.colSpan * 4} / ${cell.rowSpan * 3}`,
                     }),
                   }}
                   onContextMenu={

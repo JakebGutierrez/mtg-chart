@@ -48,6 +48,7 @@ interface Props {
   onSort: (key: SortKey) => void
   onShuffle: () => void
   onCopyLink: () => Promise<void>
+  mobileOpen?: boolean
 }
 
 function ChartPicker({
@@ -296,6 +297,7 @@ export default function ControlPanel({
   onSort,
   onShuffle,
   onCopyLink,
+  mobileOpen,
 }: Props) {
   const occupiedCount = chart.slots.filter((s) => s != null).length
   const [sortKey, setSortKey] = useState<SortKey>('type')
@@ -311,7 +313,7 @@ export default function ControlPanel({
   }
 
   return (
-    <aside className={styles.panel}>
+    <aside className={`${styles.panel} ${mobileOpen ? styles.panelOpen : ''}`}>
       <header className={styles.header}>
         <span className={styles.logo}>MTG Chart</span>
       </header>

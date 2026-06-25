@@ -70,6 +70,7 @@ function App() {
 
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // History resets synchronously when switching charts so canUndo/canRedo are
   // immediately correct for the newly active chart.
@@ -424,10 +425,23 @@ function App() {
 
   return (
     <div className="app">
+      <button
+        className="menuToggle"
+        type="button"
+        aria-label="Toggle controls"
+        aria-expanded={mobileMenuOpen}
+        onClick={() => setMobileMenuOpen((o) => !o)}
+      >
+        {mobileMenuOpen ? '✕' : '☰'}
+      </button>
+      {mobileMenuOpen && (
+        <div className="backdrop" onClick={() => setMobileMenuOpen(false)} />
+      )}
       <ControlPanel
         chart={activeChart}
         charts={charts}
         activeId={activeId}
+        mobileOpen={mobileMenuOpen}
         onSlotFill={handleSlotFill}
         onGridResize={handleGridResize}
         onBgColorChange={handleBgColorChange}
