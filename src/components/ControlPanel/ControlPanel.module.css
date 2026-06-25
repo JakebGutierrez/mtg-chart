@@ -504,3 +504,26 @@
   opacity: 0.3;
   cursor: default;
 }
+
+.clearBtn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.clearBtn:hover:not(:disabled) {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+
+.clearBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}

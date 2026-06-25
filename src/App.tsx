@@ -298,6 +298,11 @@ function App() {
     updateChartWithHistory((prev) => ({ ...prev, slots: shuffleSlots(prev.slots) }))
   }, [updateChartWithHistory])
 
+  const handleClearCards = useCallback(() => {
+    if (!window.confirm('Clear all cards from this chart?')) return
+    updateChartWithHistory((prev) => ({ ...prev, slots: [] }))
+  }, [updateChartWithHistory])
+
   const handleCopyLink = useCallback((): Promise<void> => {
     const encoded = encodeChart(activeChart)
     const url = `${window.location.origin}${window.location.pathname}?c=${encodeURIComponent(encoded)}`
@@ -467,6 +472,7 @@ function App() {
         onCropLive={handleCropLive}
         onCropChange={handleCropChange}
         onOpenImport={() => setShowImportModal(true)}
+        onClearCards={handleClearCards}
         onSort={handleSort}
         onShuffle={handleShuffle}
         onCopyLink={handleCopyLink}

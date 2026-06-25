@@ -45,6 +45,7 @@ interface Props {
   onCropLive: (crop: CropValues) => void
   onCropChange: (crop: CropValues) => void
   onOpenImport: () => void
+  onClearCards: () => void
   onSort: (key: SortKey) => void
   onShuffle: () => void
   onCopyLink: () => Promise<void>
@@ -293,6 +294,7 @@ export default function ControlPanel({
   onCropDragBegin,
   onCropLive,
   onCropChange,
+  onClearCards,
   onOpenImport,
   onSort,
   onShuffle,
@@ -552,6 +554,14 @@ export default function ControlPanel({
               Shuffle
             </button>
           </div>
+          <button
+            type="button"
+            className={styles.clearBtn}
+            disabled={occupiedCount === 0}
+            onClick={onClearCards}
+          >
+            Clear cards
+          </button>
         </section>
       </div>
 
