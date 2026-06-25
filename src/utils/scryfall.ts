@@ -44,6 +44,7 @@ interface ScryfallCardFace {
   image_uris?: ScryfallImageUris
   colors?: string[]
   type_line?: string
+  artist?: string
 }
 
 export interface ScryfallCard {
@@ -58,6 +59,7 @@ export interface ScryfallCard {
   cmc?: number
   colors?: string[]
   type_line?: string
+  artist?: string
   image_uris?: ScryfallImageUris
   card_faces?: ScryfallCardFace[]
 }
@@ -100,6 +102,7 @@ export function normaliseCard(card: ScryfallCard): ScryfallSlot | null {
         imageUris: card.card_faces.map((f) => ({
           artCrop: f.image_uris!.art_crop!,
           normal: f.image_uris!.normal,
+          artist: f.artist ?? card.artist,
         })),
         cropX: 0.5,
         cropY: 0.5,
@@ -124,7 +127,7 @@ export function normaliseCard(card: ScryfallCard): ScryfallSlot | null {
     collectorNumber: card.collector_number,
     layout: card.layout,
     selectedFaceIndex: 0,
-    imageUris: [{ artCrop: card.image_uris.art_crop, normal: card.image_uris.normal }],
+    imageUris: [{ artCrop: card.image_uris.art_crop, normal: card.image_uris.normal, artist: card.artist }],
     cropX: 0.5,
     cropY: 0.5,
     cropScale: 1.0,

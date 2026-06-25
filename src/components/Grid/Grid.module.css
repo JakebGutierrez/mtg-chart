@@ -213,6 +213,29 @@
   pointer-events: none;
 }
 
+.artistStrip {
+  position: absolute;
+  bottom: 28px;
+  left: 0;
+  right: 0;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.cell:hover .artistStrip,
+.cellSelected .artistStrip {
+  opacity: 1;
+}
+
 .cell[draggable='true'] {
   cursor: grab;
 }

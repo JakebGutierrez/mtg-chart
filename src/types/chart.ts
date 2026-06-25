@@ -16,6 +16,7 @@ export interface ScryfallSlot {
   imageUris: Array<{
     artCrop: string
     normal?: string   // absent on some unusual printings; stored for post-MVP export, not rendered
+    artist?: string
   }>
   cropX: number      // 0–1 normalised horizontal offset, default 0.5
   cropY: number      // 0–1 normalised vertical offset, default 0.5

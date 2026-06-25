@@ -206,6 +206,11 @@ export default function GridArea({
                             }),
                           }}
                         />
+                        {slot.kind === 'scryfall' && slot.imageUris[slot.selectedFaceIndex].artist && (
+                          <div className={styles.artistStrip}>
+                            Art by {slot.imageUris[slot.selectedFaceIndex].artist}
+                          </div>
+                        )}
                         {chart.nameDisplayMode === 'overlay' && (
                           <NameDisplay mode="overlay" slot={slot} />
                         )}

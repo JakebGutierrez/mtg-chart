@@ -620,6 +620,9 @@ export default function ControlPanel({
         >
           {exporting ? 'Exporting…' : 'Export PNG'}
         </button>
+        <p className={styles.disclaimer}>
+          Card data and images provided by Scryfall. Cards © Wizards of the Coast. Not affiliated with or endorsed by Scryfall or Wizards of the Coast.
+        </p>
       </footer>
     </aside>
   )
