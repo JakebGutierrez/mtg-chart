@@ -519,8 +519,8 @@
 }
 
 .clearBtn:hover:not(:disabled) {
-  border-color: #c0392b;
-  color: #c0392b;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .clearBtn:disabled {

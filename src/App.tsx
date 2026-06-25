@@ -300,6 +300,7 @@ function App() {
 
   const handleClearCards = useCallback(() => {
     if (!window.confirm('Clear all cards from this chart?')) return
+    setSelectedSlotIndex(null)
     updateChartWithHistory((prev) => ({ ...prev, slots: [] }))
   }, [updateChartWithHistory])
 

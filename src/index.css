@@ -18,6 +18,7 @@
   --overlay-shadow: rgba(0, 0, 0, 0.5);
   --shadow-text: rgba(0, 0, 0, 0.9);
   --radius-xs: 2px;
+  --danger: #c0392b;
 }
 
 *,

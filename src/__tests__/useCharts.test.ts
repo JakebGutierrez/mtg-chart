@@ -3,22 +3,15 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { loadOrInit } from '@/hooks/useCharts'
 import type { Chart } from '@/types/chart'
 
-// Minimal in-memory localStorage stub for the node environment
+// Node 22 exposes its own experimental localStorage global that takes precedence
+// over jsdom's in vitest workers. Stub it explicitly so tests are isolated.
 const store = new Map<string, string>()
 const localStorageStub = {
   getItem: (key: string) => store.get(key) ?? null,
-  setItem: (key: string, value: string) => {
-    store.set(key, value)
-  },
-  removeItem: (key: string) => {
-    store.delete(key)
-  },
-  clear: () => {
-    store.clear()
-  },
-  get length() {
-    return store.size
-  },
+  setItem: (key: string, value: string) => { store.set(key, value) },
+  removeItem: (key: string) => { store.delete(key) },
+  clear: () => { store.clear() },
+  get length() { return store.size },
   key: (index: number) => [...store.keys()][index] ?? null,
 }
 
