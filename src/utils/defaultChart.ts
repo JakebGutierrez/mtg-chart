@@ -1,10 +1,11 @@
 import type { Chart } from '@/types/chart'
+import { CURRENT_SCHEMA_VERSION } from '@/utils/schemaVersion'
 
 export function createDefaultChart(): Chart {
   return {
     id: crypto.randomUUID(),
     name: 'My Chart',
-    schemaVersion: 4,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     gridRows: 5,
     gridCols: 5,
     layout: 'uniform',

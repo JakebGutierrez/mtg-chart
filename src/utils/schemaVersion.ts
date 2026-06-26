@@ -1,6 +1,6 @@
 import type { Chart, HeroConfig, Slot } from '@/types/chart'
 
-const CURRENT_SCHEMA_VERSION = 4
+export const CURRENT_SCHEMA_VERSION = 4
 
 function migrate(chart: Chart): Chart {
   if (chart.schemaVersion > CURRENT_SCHEMA_VERSION) {

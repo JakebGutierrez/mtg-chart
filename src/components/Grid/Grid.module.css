@@ -14,6 +14,7 @@
   margin: auto;
 }
 
+.infoBanner,
 .errorBanner,
 .warningBanner {
   display: flex;
@@ -23,6 +24,12 @@
   padding: 10px 14px;
   border-radius: var(--radius-sm);
   font-size: 13px;
+}
+
+.infoBanner {
+  background: #0f1e30;
+  border: 1px solid #1e3a58;
+  color: #6090b8;
 }
 
 .errorBanner {

@@ -392,6 +392,128 @@ Minimal planning needed: upload UI placement (search panel tab vs. context menu)
 
 ---
 
+## Phase 20 — Share-link Compaction
+
+### Problem
+
+The Phase 16 implementation (`encodeChart`) serialises the full `Chart` object as
+`btoa(encodeURIComponent(JSON.stringify(chart)))`. A `ScryfallSlot` carries
+`imageUris` (two long `cards.scryfall.io` URLs per face), `cardName`, `typeLine`,
+`colors`, plus all crop fields. Nine cards already produces a URL several kilobytes
+long; a 100-card deck exceeds practical share-link limits.
+
+### Compact payload format (URL version 1)
+
+Only identity and non-default state are encoded. `imageUris`, `cardName`,
+`oracleId`, `setCode`, `collectorNumber`, `layout`, `cmc`, `colors`, `typeLine`,
+and `artist` are all reconstructed from Scryfall on load.
+
+```typescript
+interface ShareSlotStub {
+  id: string        // scryfallId (UUID)
+  f?: 0 | 1        // selectedFaceIndex — omit when 0 (default)
+  x?: number       // cropX   — omit when 0.5 (default)
+  y?: number       // cropY   — omit when 0.5 (default)
+  z?: number       // cropScale — omit when 1.0 (default)
+}
+
+interface SharePayload {
+  v: 1                            // format version
+  c: {                            // chart-level fields (no id, schemaVersion, slots)
+    name: string
+    gridRows: number
+    gridCols: number
+    layout: Layout
+    heroConfig: HeroConfig
+    displayMode: DisplayMode
+    nameDisplayMode: NameDisplayMode
+    title: string
+    backgroundColor: string
+    cellGap: number
+    padding: number
+    cornerRadius: number
+  }
+  s: Array<ShareSlotStub | null>  // visual-cell-indexed, same length as gridRows×gridCols
+}
+```
+
+Custom (`kind: 'custom'`) slots cannot be reconstructed from Scryfall — they are
+encoded as `null` (treated as empty on the receiving end). If any custom slots are
+present when encoding, `encodeShareLink` returns them alongside the URL so the
+caller can show a notice.
+
+### Compression
+
+`lz-string` (`compressToEncodedURIComponent` / `decompressFromEncodedURIComponent`)
+is used as the sole production dependency. Rationale: MIT licence, zero further
+dependencies, ~3 KB gzipped, specifically designed for URL-safe string compression
+of JSON-like data.
+
+Size estimate for a full 10×10 grid (100 scryfall slots, no crop):
+- JSON payload ≈ 5 000–5 500 chars
+- After lz-string compression ≈ 1 800–2 500 chars
+- Final URL `?c=<compressed>` ≈ 1 850–2 550 chars — within all major platforms
+
+### Backwards compatibility
+
+Old links (Phase 16, base64+JSON full chart) must continue to work until
+regenerated. Detection strategy in `decodeSharePayload`:
+
+1. Try `decompressFromEncodedURIComponent(raw)` → parse JSON → check for `v` field.
+2. If `v` is present and known → new-format path.
+3. If `v` is unknown → "link created by a newer version" error (never crash).
+4. If step 1 fails entirely (decompression error or no `v`) → fall through to legacy
+   path: `decodeURIComponent(atob(raw))` → `isChartShaped` check → `migrateAll`.
+
+### Async reconstruction flow
+
+`loadOrInit` remains **synchronous** (required for `useState` initialiser). When it
+detects a compact `?c=` payload it:
+- Decodes chart-level fields, constructs a placeholder `Chart` with `slots: []`.
+- Returns `{ charts: [placeholder], activeId, pendingReconstruction: ShareSlotStub[] }`.
+
+A `useEffect` in `useCharts` fires once on mount when `pendingReconstruction` is
+set. It:
+1. Batches stubs into chunks of 75, POSTs each to
+   `POST https://api.scryfall.com/cards/collection`
+   with body `{ identifiers: [{ id }, ...] }`.
+2. Matches response cards back to stubs by `id` (response order is not guaranteed).
+3. Calls `normaliseCard` on each matched card to produce a `ScryfallSlot`, merging
+   in the stub's `f`, `x`, `y`, `z` overrides.
+4. Rebuilds the full `slots` array (in visual-cell order) and calls
+   `updateChart(prev => ({ ...prev, slots }))`.
+5. Clears the loading flag and sets any partial-failure warning.
+
+`ChartsState` gains:
+```typescript
+pendingReconstruction?: ShareSlotStub[]
+isReconstructing?: boolean
+reconstructionError?: string   // fatal — Scryfall unreachable
+reconstructionWarning?: string // partial — some IDs not found
+```
+
+### Error states
+
+| Condition | Behaviour |
+|---|---|
+| Decompression / parse failure | Error banner: "Invalid or expired link." Default chart loaded. |
+| Unknown `v` version | Error banner: "Link format not supported — ask sender to regenerate." |
+| Scryfall unreachable | Error banner: "Could not load cards from Scryfall. Check your connection." Chart config is correct; slots remain empty. |
+| Some IDs not found | Warning banner: "N card(s) from the shared link could not be found on Scryfall." |
+| Custom slots omitted at encode time | Notice shown at copy time: "X custom image(s) were not included in the link." |
+
+### Files touched
+
+| File | Change |
+|---|---|
+| `src/utils/shareLink.ts` | Replace with compact encoder/decoder; legacy fallback in decoder |
+| `src/hooks/useCharts.ts` | `loadOrInit` calls compact decoder; reconstruction `useEffect`; expose `isReconstructing` / error / warning |
+| `src/App.tsx` | Pass loading/error state to Grid; show custom-slot notice at copy time |
+| `src/components/Grid/index.tsx` | Reconstruction loading overlay / banner |
+| `src/__tests__/shareLink.test.ts` | New: round-trip, legacy compat, partial failure, unknown version |
+
+---
+
 ## Post-MVP Integration Points (reference)
 
 1. **Hybrid hero layout / Commander mode** — see Phase 14 above.

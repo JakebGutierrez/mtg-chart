@@ -9,7 +9,7 @@ import { useExport } from '@/hooks/useExport'
 import { useCharts } from '@/hooks/useCharts'
 import { sortSlots, shuffleSlots } from '@/utils/sort'
 import type { SortKey } from '@/utils/sort'
-import { encodeChart } from '@/utils/shareLink'
+import { encodeShareLink } from '@/utils/shareLink'
 import type { Chart, Slot, ScryfallSlot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode, Layout, HeroConfig } from '@/types/chart'
 
 type LayoutMode = 'uniform' | 'commander' | 'partner'
@@ -40,8 +40,12 @@ interface History {
 type CropValues = { cropX: number; cropY: number; cropScale: number }
 
 function App() {
-  const { charts, activeId, activeChart, createChart, deleteChart, updateChart, renameChart, setActiveId } =
-    useCharts()
+  const {
+    charts, activeId, activeChart,
+    createChart, deleteChart, updateChart, renameChart, setActiveId,
+    isReconstructing, reconstructionError, reconstructionWarning,
+    dismissReconstructionError, dismissReconstructionWarning,
+  } = useCharts()
 
   // Option B: per-chart undo/redo history lives here in App, above useCharts.
   // History is session-only — not persisted to localStorage.
@@ -304,10 +308,10 @@ function App() {
     updateChartWithHistory((prev) => ({ ...prev, slots: [] }))
   }, [updateChartWithHistory])
 
-  const handleCopyLink = useCallback((): Promise<void> => {
-    const encoded = encodeChart(activeChart)
-    const url = `${window.location.origin}${window.location.pathname}?c=${encodeURIComponent(encoded)}`
-    return navigator.clipboard.writeText(url)
+  const handleCopyLink = useCallback((): Promise<number> => {
+    const { encoded, customSlotsOmitted } = encodeShareLink(activeChart)
+    const url = `${window.location.origin}${window.location.pathname}?c=${encoded}`
+    return navigator.clipboard.writeText(url).then(() => customSlotsOmitted)
   }, [activeChart])
 
   const handleFaceToggle = useCallback(
@@ -500,6 +504,11 @@ function App() {
         exportWarning={exportWarning}
         onDismissError={dismissError}
         onDismissWarning={dismissWarning}
+        isReconstructing={isReconstructing}
+        reconstructionError={reconstructionError}
+        reconstructionWarning={reconstructionWarning}
+        onDismissReconstructionError={dismissReconstructionError}
+        onDismissReconstructionWarning={dismissReconstructionWarning}
       />
     </div>
   )

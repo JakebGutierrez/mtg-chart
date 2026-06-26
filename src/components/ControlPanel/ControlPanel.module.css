@@ -469,6 +469,14 @@
   color: var(--accent);
 }
 
+.copyLinkNotice {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  opacity: 0.8;
+}
+
 /* Arrange section */
 .arrangeSelect {
   padding: 4px 6px;

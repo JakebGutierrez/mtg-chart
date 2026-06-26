@@ -48,7 +48,7 @@ interface Props {
   onClearCards: () => void
   onSort: (key: SortKey) => void
   onShuffle: () => void
-  onCopyLink: () => Promise<void>
+  onCopyLink: () => Promise<number>
   mobileOpen?: boolean
 }
 
@@ -304,13 +304,19 @@ export default function ControlPanel({
   const occupiedCount = chart.slots.filter((s) => s != null).length
   const [sortKey, setSortKey] = useState<SortKey>('type')
   const [copied, setCopied] = useState(false)
+  const [customSlotsNotice, setCustomSlotsNotice] = useState(0)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleCopyLink() {
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-    onCopyLink().then(() => {
+    onCopyLink().then((omitted) => {
       setCopied(true)
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 1500)
+      setCustomSlotsNotice(omitted)
+      const delay = omitted > 0 ? 3000 : 1500
+      copyTimeoutRef.current = setTimeout(() => {
+        setCopied(false)
+        setCustomSlotsNotice(0)
+      }, delay)
     }).catch(() => {})
   }
 
@@ -595,6 +601,11 @@ export default function ControlPanel({
         >
           {copied ? 'Copied!' : 'Copy link'}
         </button>
+        {customSlotsNotice > 0 && (
+          <p className={styles.copyLinkNotice}>
+            {customSlotsNotice} custom image{customSlotsNotice !== 1 ? 's' : ''} not included in link.
+          </p>
+        )}
         <div className={styles.scaleRow}>
           <span className={styles.label}>Scale</span>
           <div className={styles.segmented} role="radiogroup" aria-label="Export scale">

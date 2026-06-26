@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { Chart } from '@/types/chart'
+import type { Chart, ScryfallSlot } from '@/types/chart'
 import { createDefaultChart } from '@/utils/defaultChart'
-import { migrateAll } from '@/utils/schemaVersion'
-import { decodeChart } from '@/utils/shareLink'
+import { migrateAll, CURRENT_SCHEMA_VERSION } from '@/utils/schemaVersion'
+import { decodeSharePayload, reconstructSlots, type ShareSlotStub } from '@/utils/shareLink'
 import { isChartShaped } from '@/utils/chartShape'
+import { normaliseCard, type ScryfallCard } from '@/utils/scryfall'
 
 const CHARTS_KEY = 'mtg-chart:charts'
 const ACTIVE_ID_KEY = 'mtg-chart:activeId'
@@ -28,28 +29,7 @@ function readStoredCharts(): Chart[] {
   return []
 }
 
-interface ChartsState {
-  charts: Chart[]
-  activeId: string
-  // Set to true only when loadOrInit decoded a valid share-link param.
-  // Absent (undefined) on normal loads and after any subsequent setState.
-  consumedShareParam?: true
-}
-
-// Does not call persist() — the useEffect in useCharts handles all writes.
-// Does not call replaceState — a post-mount useEffect in useCharts does that,
-// conditional on consumedShareParam so malformed ?c= params are left untouched.
-export function loadOrInit(): ChartsState {
-  const param = new URLSearchParams(window.location.search).get('c')
-  if (param) {
-    const shared = decodeChart(param)
-    if (shared) {
-      const existingCharts = readStoredCharts()
-      const chart = { ...shared, id: crypto.randomUUID() }
-      return { charts: [...existingCharts, chart], activeId: chart.id, consumedShareParam: true }
-    }
-  }
-
+function loadFromStorageOrDefault(): ChartsState {
   try {
     const chartsJson = localStorage.getItem(CHARTS_KEY)
     const storedActiveId = localStorage.getItem(ACTIVE_ID_KEY)
@@ -71,34 +51,191 @@ export function loadOrInit(): ChartsState {
   return { charts: [fresh], activeId: fresh.id }
 }
 
+interface CollectionResponse {
+  data: ScryfallCard[]
+  not_found: unknown[]
+}
+
+interface ChartsState {
+  charts: Chart[]
+  activeId: string
+  // Set to true only when loadOrInit decoded a valid share-link param.
+  // Absent (undefined) on normal loads and after any subsequent setState.
+  consumedShareParam?: true
+  pendingReconstruction?: Array<ShareSlotStub | null>
+  isReconstructing?: boolean
+  reconstructionError?: string
+  reconstructionWarning?: string
+}
+
+// Does not call persist() — the useEffect in useCharts handles all writes.
+// Does not call replaceState — a post-mount useEffect in useCharts does that,
+// conditional on consumedShareParam so malformed ?c= params are left untouched.
+export function loadOrInit(): ChartsState {
+  const param = new URLSearchParams(window.location.search).get('c')
+  if (param) {
+    const result = decodeSharePayload(param)
+
+    if (result.kind === 'compact') {
+      const existingCharts = readStoredCharts()
+      const placeholder: Chart = {
+        ...result.payload.c,
+        id: crypto.randomUUID(),
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        slots: [],
+      }
+      return {
+        charts: [...existingCharts, placeholder],
+        activeId: placeholder.id,
+        consumedShareParam: true,
+        pendingReconstruction: result.payload.s,
+        isReconstructing: true,
+      }
+    }
+
+    if (result.kind === 'legacy') {
+      const existingCharts = readStoredCharts()
+      const chart = { ...result.chart, id: crypto.randomUUID() }
+      return { charts: [...existingCharts, chart], activeId: chart.id, consumedShareParam: true }
+    }
+
+    // error: fall through to stored/default; leave URL intact so user can see it
+    return { ...loadFromStorageOrDefault(), reconstructionError: result.message }
+  }
+
+  return loadFromStorageOrDefault()
+}
+
 export function useCharts(): {
   charts: Chart[]
   activeId: string
   activeChart: Chart
+  isReconstructing: boolean
+  reconstructionError: string | null
+  reconstructionWarning: string | null
   createChart: () => void
   deleteChart: (id: string) => void
   updateChart: (updater: (prev: Chart) => Chart) => void
   renameChart: (id: string, name: string) => void
   setActiveId: (id: string) => void
+  dismissReconstructionError: () => void
+  dismissReconstructionWarning: () => void
 } {
   const [state, setState] = useState<ChartsState>(loadOrInit)
 
-  // Capture the initial consumedShareParam into a ref so the post-mount effect
-  // can read it without adding it to the dependency array (it's a one-shot flag
-  // that is only meaningful at initial load time). Reading state here (not
-  // ref.current) is safe — it's not a ref access during render.
+  // Capture the initial consumedShareParam and reconstruction context into refs so
+  // post-mount effects can read them without being listed as dependencies. These
+  // values are only meaningful at initial load time (set by loadOrInit from the URL).
   const consumedShareParamRef = useRef(state.consumedShareParam ?? false)
+  const pendingReconstructionRef = useRef(state.pendingReconstruction ?? null)
+  const placeholderIdRef = useRef(state.activeId)
 
   // Strip ?c= only when loadOrInit successfully decoded a share link.
   // A malformed or unrelated ?c= param leaves the URL unchanged.
   useEffect(() => {
     if (consumedShareParamRef.current) {
-      window.history.replaceState(null, '', window.location.pathname)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('c')
+      window.history.replaceState(null, '', url.toString())
     }
   }, [])
 
-  // Persist after every state change — keeps all setState updaters pure (no side effects).
+  // Reconstruct slots from Scryfall when a compact share link was decoded.
+  // Runs once on mount. AbortController cleanup handles StrictMode double-invoke
+  // and genuine unmount (e.g. user navigates away mid-fetch).
   useEffect(() => {
+    const maybeStubs = pendingReconstructionRef.current
+    if (!maybeStubs) return
+    // Fresh binding so TypeScript infers the non-nullable type into the async closure
+    const stubs = maybeStubs
+
+    const placeholderId = placeholderIdRef.current
+    const controller = new AbortController()
+
+    async function run() {
+      try {
+        const nonNullStubs = stubs.filter((s): s is ShareSlotStub => s !== null)
+        const cardMap = new Map<string, ScryfallSlot>()
+        let notFoundCount = 0
+        let normaliseFailCount = 0
+
+        for (let i = 0; i < nonNullStubs.length; i += 75) {
+          const chunk = nonNullStubs.slice(i, i + 75)
+          const res = await fetch('https://api.scryfall.com/cards/collection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifiers: chunk.map((s) => ({ id: s.id })) }),
+            signal: controller.signal,
+          })
+          if (!res.ok) throw new Error(`Scryfall collection returned ${res.status}`)
+          const body = (await res.json()) as CollectionResponse
+          notFoundCount += body.not_found.length
+          for (const card of body.data) {
+            const slot = normaliseCard(card)
+            if (!slot) { normaliseFailCount++; continue }
+            cardMap.set(card.id, slot)
+          }
+        }
+
+        const slots = reconstructSlots(stubs, cardMap)
+        const warningCount = notFoundCount + normaliseFailCount
+
+        setState((prev) => {
+          const prevChart = prev.charts.find((c) => c.id === placeholderId)
+          if (!prevChart) {
+            // Placeholder was deleted mid-fetch — discard result, just clear flags
+            return { ...prev, pendingReconstruction: undefined, isReconstructing: false }
+          }
+          const updatedChart = { ...prevChart, slots }
+          return {
+            ...prev,
+            charts: prev.charts.map((c) => (c.id === updatedChart.id ? updatedChart : c)),
+            pendingReconstruction: undefined,
+            isReconstructing: false,
+            reconstructionWarning:
+              warningCount > 0
+                ? `${warningCount} card(s) from the shared link could not be found or loaded.`
+                : undefined,
+          }
+        })
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return
+
+        setState((prev) => {
+          const charts = prev.charts.filter((c) => c.id !== placeholderId)
+          if (charts.length === 0) {
+            const fresh = createDefaultChart()
+            return {
+              charts: [fresh],
+              activeId: fresh.id,
+              isReconstructing: false,
+              reconstructionError: 'Could not load cards from Scryfall. Check your connection.',
+            }
+          }
+          const activeId = charts.some((c) => c.id === prev.activeId)
+            ? prev.activeId
+            : charts[0].id
+          return {
+            ...prev,
+            charts,
+            activeId,
+            pendingReconstruction: undefined,
+            isReconstructing: false,
+            reconstructionError: 'Could not load cards from Scryfall. Check your connection.',
+          }
+        })
+      }
+    }
+
+    void run()
+    return () => controller.abort()
+  }, [])
+
+  // Persist after every settled state change. Suppressed while isReconstructing
+  // so the empty placeholder chart is never written before reconstruction
+  // resolves — on failure the placeholder is removed and existing charts persist.
+  useEffect(() => {
+    if (state.isReconstructing) return
     persist(state.charts, state.activeId)
   }, [state])
 
@@ -161,5 +298,27 @@ export function useCharts(): {
     })
   }, [])
 
-  return { charts, activeId, activeChart, createChart, deleteChart, updateChart, renameChart, setActiveId }
+  const dismissReconstructionError = useCallback(() => {
+    setState((prev) => ({ ...prev, reconstructionError: undefined }))
+  }, [])
+
+  const dismissReconstructionWarning = useCallback(() => {
+    setState((prev) => ({ ...prev, reconstructionWarning: undefined }))
+  }, [])
+
+  return {
+    charts,
+    activeId,
+    activeChart,
+    isReconstructing: state.isReconstructing ?? false,
+    reconstructionError: state.reconstructionError ?? null,
+    reconstructionWarning: state.reconstructionWarning ?? null,
+    createChart,
+    deleteChart,
+    updateChart,
+    renameChart,
+    setActiveId,
+    dismissReconstructionError,
+    dismissReconstructionWarning,
+  }
 }

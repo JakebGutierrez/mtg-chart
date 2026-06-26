@@ -21,6 +21,11 @@ interface Props {
   exportWarning: string | null
   onDismissError: () => void
   onDismissWarning: () => void
+  isReconstructing: boolean
+  reconstructionError: string | null
+  reconstructionWarning: string | null
+  onDismissReconstructionError: () => void
+  onDismissReconstructionWarning: () => void
 }
 
 export default function GridArea({
@@ -36,6 +41,11 @@ export default function GridArea({
   exportWarning,
   onDismissError,
   onDismissWarning,
+  isReconstructing,
+  reconstructionError,
+  reconstructionWarning,
+  onDismissReconstructionError,
+  onDismissReconstructionWarning,
 }: Props) {
   const cellMap = useMemo(
     () => generateCellMap(chart.gridRows, chart.gridCols, chart.heroConfig),
@@ -91,6 +101,37 @@ export default function GridArea({
   return (
     <main className={styles.area} onClick={(e) => { if (e.target === e.currentTarget) onCellSelect(null) }}>
       <div className={styles.canvasGroup}>
+        {isReconstructing && (
+          <div className={styles.infoBanner} role="status" aria-live="polite">
+            Loading cards from shared link…
+          </div>
+        )}
+        {reconstructionError && !isReconstructing && (
+          <div className={styles.errorBanner} role="alert">
+            <span>{reconstructionError}</span>
+            <button
+              type="button"
+              className={styles.errorDismiss}
+              onClick={onDismissReconstructionError}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
+        {reconstructionWarning && !isReconstructing && !reconstructionError && (
+          <div className={styles.warningBanner} role="status">
+            <span>{reconstructionWarning}</span>
+            <button
+              type="button"
+              className={styles.errorDismiss}
+              onClick={onDismissReconstructionWarning}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
         {exportError && (
           <div className={styles.errorBanner} role="alert">
             <span>{exportError}</span>
