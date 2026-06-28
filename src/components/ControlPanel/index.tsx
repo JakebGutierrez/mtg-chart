@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { Chart, Slot, NumericStyleField, NameDisplayMode, DisplayMode, HeroConfig } from '@/types/chart'
 import type { SortKey } from '@/utils/sort'
+import { ALLOWED_TITLE_FONTS } from '@/utils/shareLink'
 
 type LayoutMode = 'uniform' | 'commander' | 'partner'
 
@@ -25,6 +26,7 @@ interface Props {
   onBgColorChange: (value: string) => void
   onStyleStep: (field: NumericStyleField, delta: number) => void
   onTitleChange: (value: string) => void
+  onTitleFontChange: (font: string | undefined) => void
   onNameDisplayChange: (mode: NameDisplayMode) => void
   onDisplayModeChange: (mode: DisplayMode) => void
   onLayoutModeChange: (mode: LayoutMode) => void
@@ -275,6 +277,7 @@ export default function ControlPanel({
   onBgColorChange,
   onStyleStep,
   onTitleChange,
+  onTitleFontChange,
   onNameDisplayChange,
   onDisplayModeChange,
   onLayoutModeChange,
@@ -507,6 +510,20 @@ export default function ControlPanel({
             value={chart.title}
             onChange={(e) => onTitleChange(e.target.value)}
           />
+          <div className={styles.row}>
+            <span className={styles.label}>Font</span>
+            <select
+              className={styles.arrangeSelect}
+              value={chart.titleFont ?? ''}
+              onChange={(e) => onTitleFontChange(e.target.value || undefined)}
+              style={chart.titleFont ? { fontFamily: chart.titleFont } : undefined}
+            >
+              <option value="">Default</option>
+              {ALLOWED_TITLE_FONTS.map((font) => (
+                <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
+              ))}
+            </select>
+          </div>
         </section>
 
         <section className={styles.section}>

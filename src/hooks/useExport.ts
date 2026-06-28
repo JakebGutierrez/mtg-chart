@@ -238,8 +238,15 @@ export function useExport(
 
       // Title
       if (chart.title) {
+        // Explicitly load the selected font before drawing. document.fonts.ready
+        // is not sufficient when no DOM element has rendered the font yet —
+        // canvas uses the FontFace API independently and requires an explicit load.
+        if (chart.titleFont) {
+          await document.fonts.load(`600 ${TITLE_FONT_SIZE}px "${chart.titleFont}"`)
+        }
         ctx.save()
-        ctx.font = `600 ${TITLE_FONT_SIZE}px ${BODY_FONT}`
+        const titleFontFamily = chart.titleFont ? `"${chart.titleFont}"` : BODY_FONT
+        ctx.font = `600 ${TITLE_FONT_SIZE}px ${titleFontFamily}`
         ctx.fillStyle = TEXT_PRIMARY
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'

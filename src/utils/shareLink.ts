@@ -22,6 +22,7 @@ interface SharePayloadChart {
   displayMode: DisplayMode
   nameDisplayMode: NameDisplayMode
   title: string
+  titleFont?: string
   backgroundColor: string
   cellGap: number
   padding: number
@@ -67,6 +68,7 @@ export function encodeShareLink(chart: Chart): { encoded: string; customSlotsOmi
       displayMode: chart.displayMode,
       nameDisplayMode: chart.nameDisplayMode,
       title: chart.title,
+      titleFont: chart.titleFont !== undefined && ALLOWED_TITLE_FONTS_SET.has(chart.titleFont) ? chart.titleFont : undefined,
       backgroundColor: chart.backgroundColor,
       cellGap: chart.cellGap,
       padding: chart.padding,
@@ -78,6 +80,12 @@ export function encodeShareLink(chart: Chart): { encoded: string; customSlotsOmi
   const encoded = LZString.compressToEncodedURIComponent(JSON.stringify(payload))
   return { encoded, customSlotsOmitted }
 }
+
+export const ALLOWED_TITLE_FONTS = [
+  'Cinzel', 'Cormorant Garamond', 'Uncial Antiqua', 'Inter', 'Comic Neue',
+] as const
+
+const ALLOWED_TITLE_FONTS_SET = new Set<string>(ALLOWED_TITLE_FONTS)
 
 function isSharePayloadShaped(v: unknown): v is SharePayload {
   if (typeof v !== 'object' || v === null) return false
@@ -103,6 +111,8 @@ function isSharePayloadShaped(v: unknown): v is SharePayload {
   if (c.nameDisplayMode !== 'none' && c.nameDisplayMode !== 'sidebar' && c.nameDisplayMode !== 'overlay') return false
   // heroConfig must be an array (item shapes are validated at runtime when used)
   if (!Array.isArray(c.heroConfig)) return false
+  // titleFont must be one of the known font names when present
+  if (c.titleFont !== undefined && (typeof c.titleFont !== 'string' || !ALLOWED_TITLE_FONTS_SET.has(c.titleFont))) return false
   // Stub validation — f must be 0 or 1 if present to prevent out-of-bounds imageUris access
   for (const stub of p.s as unknown[]) {
     if (stub === null) continue

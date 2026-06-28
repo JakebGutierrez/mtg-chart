@@ -143,6 +143,48 @@ describe('encodeShareLink + decodeSharePayload', () => {
   })
 })
 
+// ─── titleFont round-trip and validation ──────────────────────────────────────
+
+describe('titleFont in share link', () => {
+  it('round-trips titleFont when set to a valid font name', () => {
+    const chart = makeChart({ titleFont: 'Cinzel' })
+    const { encoded } = encodeShareLink(chart)
+    const result = decodeSharePayload(encoded)
+    expect(result.kind).toBe('compact')
+    if (result.kind !== 'compact') return
+    expect(result.payload.c.titleFont).toBe('Cinzel')
+  })
+
+  it('omits titleFont from the payload when not set', () => {
+    const chart = makeChart()
+    const { encoded } = encodeShareLink(chart)
+    const result = decodeSharePayload(encoded)
+    expect(result.kind).toBe('compact')
+    if (result.kind !== 'compact') return
+    expect(result.payload.c.titleFont).toBeUndefined()
+  })
+
+  it('rejects a payload with a titleFont that is not in the allowed set', () => {
+    const chart = makeChart({ titleFont: 'Cinzel' })
+    const { encoded } = encodeShareLink(chart)
+    const decompressed = LZString.decompressFromEncodedURIComponent(encoded)!
+    const payload = JSON.parse(decompressed) as Record<string, unknown>
+    ;(payload.c as Record<string, unknown>).titleFont = 'Evil"Font'
+    const tampered = LZString.compressToEncodedURIComponent(JSON.stringify(payload))
+    expect(decodeSharePayload(tampered).kind).toBe('error')
+  })
+
+  it('rejects a payload with a non-string titleFont', () => {
+    const chart = makeChart({ titleFont: 'Inter' })
+    const { encoded } = encodeShareLink(chart)
+    const decompressed = LZString.decompressFromEncodedURIComponent(encoded)!
+    const payload = JSON.parse(decompressed) as Record<string, unknown>
+    ;(payload.c as Record<string, unknown>).titleFont = 42
+    const tampered = LZString.compressToEncodedURIComponent(JSON.stringify(payload))
+    expect(decodeSharePayload(tampered).kind).toBe('error')
+  })
+})
+
 // ─── Legacy compatibility ─────────────────────────────────────────────────────
 
 describe('decodeSharePayload — legacy fallback', () => {

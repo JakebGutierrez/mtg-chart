@@ -87,7 +87,14 @@ export default function SearchPanel({ chart, onSlotFill }: Props) {
       {!isLoading && !error && results.length > 0 && (
         <ul className={styles.results} role="list">
           {results.map((result) => (
-            <li key={result.scryfallId}>
+            <li
+              key={result.scryfallId}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/x-mtg-search-result', JSON.stringify(result))
+                e.dataTransfer.effectAllowed = 'copy'
+              }}
+            >
               <button
                 className={styles.resultBtn}
                 type="button"

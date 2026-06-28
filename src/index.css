@@ -52,3 +52,49 @@ button {
 input {
   font: inherit;
 }
+
+/* ── Notification banners ─────────────────────────────────────────────────── */
+
+.notifBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.notifBannerInfo {
+  background: #0f1e30;
+  border: 1px solid #1e3a58;
+  color: #6090b8;
+}
+
+.notifBannerError {
+  background: #3a1a1a;
+  border: 1px solid #7a2a2a;
+  color: #f08080;
+}
+
+.notifBannerWarning {
+  background: #2a2210;
+  border: 1px solid #6a5010;
+  color: #c8a040;
+}
+
+.notifDismiss {
+  background: none;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.notifBannerError .notifDismiss { color: #f08080; }
+.notifBannerWarning .notifDismiss { color: #c8a040; }
+
+.notifDismiss:hover { opacity: 1; }

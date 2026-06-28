@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef, type RefObject } from 'react'
+import { useMemo, useState, useCallback, useRef, useEffect, type RefObject, type ReactNode } from 'react'
 import type { Chart, Slot } from '@/types/chart'
 import { generateCellMap } from '@/utils/cellMap'
 import { getSlot } from '@/utils/chart'
@@ -13,19 +13,12 @@ interface Props {
   onSlotClear: (slotIndex: number) => void
   onSlotUpdate: (slotIndex: number, updated: Slot) => void
   onSlotMove: (from: number, to: number) => void
+  onSlotFillAtIndex: (slotIndex: number, slot: Slot) => void
   onFaceToggle: (slotIndex: number) => void
   selectedSlotIndex: number | null
   onCellSelect: (slotIndex: number | null) => void
   gridRef: RefObject<HTMLDivElement | null>
-  exportError: string | null
-  exportWarning: string | null
-  onDismissError: () => void
-  onDismissWarning: () => void
-  isReconstructing: boolean
-  reconstructionError: string | null
-  reconstructionWarning: string | null
-  onDismissReconstructionError: () => void
-  onDismissReconstructionWarning: () => void
+  notifications?: ReactNode
 }
 
 export default function GridArea({
@@ -33,19 +26,12 @@ export default function GridArea({
   onSlotClear,
   onSlotUpdate,
   onSlotMove,
+  onSlotFillAtIndex,
   onFaceToggle,
   selectedSlotIndex,
   onCellSelect,
   gridRef,
-  exportError,
-  exportWarning,
-  onDismissError,
-  onDismissWarning,
-  isReconstructing,
-  reconstructionError,
-  reconstructionWarning,
-  onDismissReconstructionError,
-  onDismissReconstructionWarning,
+  notifications,
 }: Props) {
   const cellMap = useMemo(
     () => generateCellMap(chart.gridRows, chart.gridCols, chart.heroConfig),
@@ -63,6 +49,15 @@ export default function GridArea({
 
   const dragFromRef = useRef<number | null>(null)
   const [dragOver, setDragOver] = useState<number | null>(null)
+
+  // Clears the drag-over highlight when any drag ends outside the grid
+  // (e.g. Escape-cancel or drop on a non-cell target). Grid-to-grid drags
+  // already clear via onDragEnd, so this is a harmless no-op for those.
+  useEffect(() => {
+    const clear = () => setDragOver(null)
+    document.addEventListener('dragend', clear)
+    return () => document.removeEventListener('dragend', clear)
+  }, [])
 
   const handleCellContextMenu = useCallback((e: React.MouseEvent, slotIndex: number) => {
     e.preventDefault()
@@ -100,59 +95,8 @@ export default function GridArea({
 
   return (
     <main className={styles.area} onClick={(e) => { if (e.target === e.currentTarget) onCellSelect(null) }}>
+      {notifications}
       <div className={styles.canvasGroup}>
-        {isReconstructing && (
-          <div className={styles.infoBanner} role="status" aria-live="polite">
-            Loading cards from shared link…
-          </div>
-        )}
-        {reconstructionError && !isReconstructing && (
-          <div className={styles.errorBanner} role="alert">
-            <span>{reconstructionError}</span>
-            <button
-              type="button"
-              className={styles.errorDismiss}
-              onClick={onDismissReconstructionError}
-              aria-label="Dismiss"
-            >
-              ×
-            </button>
-          </div>
-        )}
-        {reconstructionWarning && !isReconstructing && !reconstructionError && (
-          <div className={styles.warningBanner} role="status">
-            <span>{reconstructionWarning}</span>
-            <button
-              type="button"
-              className={styles.errorDismiss}
-              onClick={onDismissReconstructionWarning}
-              aria-label="Dismiss"
-            >
-              ×
-            </button>
-          </div>
-        )}
-        {exportError && (
-          <div className={styles.errorBanner} role="alert">
-            <span>{exportError}</span>
-            <button type="button" className={styles.errorDismiss} onClick={onDismissError} aria-label="Dismiss">
-              ×
-            </button>
-          </div>
-        )}
-        {exportWarning && !exportError && (
-          <div className={styles.warningBanner} role="status">
-            <span>{exportWarning}</span>
-            <button
-              type="button"
-              className={styles.errorDismiss}
-              onClick={onDismissWarning}
-              aria-label="Dismiss"
-            >
-              ×
-            </button>
-          </div>
-        )}
         <div
         className={styles.canvas}
         style={{
@@ -161,7 +105,14 @@ export default function GridArea({
         }}
         onClick={(e) => { if (e.target === e.currentTarget) onCellSelect(null) }}
       >
-        {chart.title && <div className={styles.chartTitle}>{chart.title}</div>}
+        {chart.title && (
+          <div
+            className={styles.chartTitle}
+            style={chart.titleFont ? { fontFamily: chart.titleFont } : undefined}
+          >
+            {chart.title}
+          </div>
+        )}
         <div
           className={styles.canvasBody}
           style={{ gap: chart.nameDisplayMode === 'sidebar' ? 16 : undefined }}
@@ -220,13 +171,32 @@ export default function GridArea({
                   onDrop={(e) => {
                     e.preventDefault()
                     setDragOver(null)
+                    const searchPayload = e.dataTransfer.getData('application/x-mtg-search-result')
+                    if (searchPayload) {
+                      try {
+                        const parsed: unknown = JSON.parse(searchPayload)
+                        if (typeof parsed === 'object' && parsed !== null) {
+                          const p = parsed as Record<string, unknown>
+                          if (
+                            p.kind === 'scryfall' &&
+                            Array.isArray(p.imageUris) &&
+                            p.imageUris.length > 0 &&
+                            typeof (p.imageUris[0] as Record<string, unknown>)?.artCrop === 'string'
+                          ) {
+                            onSlotFillAtIndex(cell.slotIndex, parsed as Slot)
+                          }
+                        }
+                      } catch { /* ignore malformed payload */ }
+                      dragFromRef.current = null
+                      return
+                    }
                     if (dragFromRef.current !== null && dragFromRef.current !== cell.slotIndex) {
                       onSlotMove(dragFromRef.current, cell.slotIndex)
                     }
                     dragFromRef.current = null
                   }}
                   onDragEnd={() => { dragFromRef.current = null; setDragOver(null) }}
-                  onClick={() => onCellSelect(slot ? cell.slotIndex : null)}
+                  onClick={() => onCellSelect(cell.slotIndex)}
                 >
                   {slot && (() => {
                     const imgSrc = slot.kind === 'scryfall'

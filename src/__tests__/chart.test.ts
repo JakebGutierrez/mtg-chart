@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getSlot } from '@/utils/chart'
+import { getSlot, resolveSlotFillTarget } from '@/utils/chart'
 import type { Chart, Slot } from '@/types/chart'
 
 function makeSlot(): Slot {
@@ -22,7 +22,7 @@ function makeSlot(): Slot {
   }
 }
 
-function makeChart(slots: Array<Slot | null>): Chart {
+function makeChart(slots: Array<Slot | null> = [], overrides: Partial<Omit<Chart, 'slots'>> = {}): Chart {
   return {
     id: 'test',
     name: 'Test',
@@ -38,6 +38,7 @@ function makeChart(slots: Array<Slot | null>): Chart {
     cellGap: 4,
     padding: 16,
     cornerRadius: 4,
+    ...overrides,
     slots,
   }
 }
@@ -57,5 +58,39 @@ describe('getSlot', () => {
   it('returns null for an index within slots.length where the slot is null', () => {
     const chart = makeChart([makeSlot(), null, makeSlot()])
     expect(getSlot(chart, 1)).toBeNull()
+  })
+})
+
+describe('resolveSlotFillTarget', () => {
+  it('returns the first empty slot when nothing is selected', () => {
+    const chart = makeChart([makeSlot(), null, null])
+    expect(resolveSlotFillTarget(chart, null)).toBe(1)
+  })
+
+  it('targets the selected slot when it is empty', () => {
+    const chart = makeChart([makeSlot(), null, null])
+    expect(resolveSlotFillTarget(chart, 2)).toBe(2)
+  })
+
+  it('falls back to first empty when the selected slot is already filled', () => {
+    const chart = makeChart([makeSlot(), null, null])
+    expect(resolveSlotFillTarget(chart, 0)).toBe(1)
+  })
+
+  it('returns null when the grid is full and nothing is selected', () => {
+    const chart = makeChart(Array.from({ length: 9 }, () => makeSlot()))
+    expect(resolveSlotFillTarget(chart, null)).toBeNull()
+  })
+
+  it('returns null when the grid is full even if a filled slot is selected', () => {
+    const chart = makeChart(Array.from({ length: 9 }, () => makeSlot()))
+    expect(resolveSlotFillTarget(chart, 3)).toBeNull()
+  })
+
+  it('falls back to first empty when the selected index is out of bounds for the current grid', () => {
+    // Index 8 is valid in a 3×3 grid but does not exist in a 2×2 grid.
+    // The cellMap.some() guard catches this and falls back to first empty (0).
+    const chart = makeChart([], { gridRows: 2, gridCols: 2 })
+    expect(resolveSlotFillTarget(chart, 8)).toBe(0)
   })
 })

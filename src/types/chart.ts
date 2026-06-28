@@ -48,6 +48,7 @@ export interface Chart {
   displayMode: DisplayMode
   nameDisplayMode: NameDisplayMode
   title: string
+  titleFont?: string
   backgroundColor: string
   cellGap: number
   padding: number

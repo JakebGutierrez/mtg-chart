@@ -4,7 +4,7 @@ import ControlPanel from '@/components/ControlPanel'
 import GridArea from '@/components/Grid'
 import ImportModal from '@/components/ImportModal'
 import { generateCellMap } from '@/utils/cellMap'
-import { getSlot } from '@/utils/chart'
+import { getSlot, resolveSlotFillTarget } from '@/utils/chart'
 import { useExport } from '@/hooks/useExport'
 import { useCharts } from '@/hooks/useCharts'
 import { sortSlots, shuffleSlots } from '@/utils/sort'
@@ -158,19 +158,29 @@ function App() {
 
   const handleSlotFill = useCallback(
     (slot: Slot) => {
+      const targetIndex = selectedSlotIndex
+      setSelectedSlotIndex(null)
       updateChartWithHistory((prev) => {
-        const cellMap = generateCellMap(prev.gridRows, prev.gridCols, prev.heroConfig)
-        const target = cellMap.find(
-          (c): c is Exclude<CellDef, { kind: 'covered' }> =>
-            c.kind !== 'covered' && getSlot(prev, c.slotIndex) === null,
-        )
-        if (!target) return prev
+        const target = resolveSlotFillTarget(prev, targetIndex)
+        if (target === null) return prev
         const slots = [...prev.slots]
-        slots[target.slotIndex] = slot
+        slots[target] = slot
         return { ...prev, slots }
       })
     },
-    [updateChartWithHistory],
+    [updateChartWithHistory, selectedSlotIndex],
+  )
+
+  const handleSlotFillAtIndex = useCallback(
+    (slotIndex: number, slot: Slot) => {
+      if (selectedSlotIndex === slotIndex) setSelectedSlotIndex(null)
+      updateChartWithHistory((prev) => {
+        const slots = [...prev.slots]
+        slots[slotIndex] = slot
+        return { ...prev, slots }
+      })
+    },
+    [updateChartWithHistory, selectedSlotIndex],
   )
 
   const handleSlotClear = useCallback(
@@ -259,6 +269,13 @@ function App() {
   const handleTitleChange = useCallback(
     (value: string) => {
       updateChartWithHistory((prev) => ({ ...prev, title: value }))
+    },
+    [updateChartWithHistory],
+  )
+
+  const handleTitleFontChange = useCallback(
+    (font: string | undefined) => {
+      updateChartWithHistory((prev) => ({ ...prev, titleFont: font }))
     },
     [updateChartWithHistory],
   )
@@ -433,6 +450,40 @@ function App() {
     triggerExport,
   } = useExport(activeChart, handleSlotImageUpdate, gridRef)
 
+  const notifications = (
+    <>
+      {isReconstructing && (
+        <div className="notifBanner notifBannerInfo" role="status" aria-live="polite">
+          Loading cards from shared link…
+        </div>
+      )}
+      {reconstructionError && !isReconstructing && (
+        <div className="notifBanner notifBannerError" role="alert">
+          <span>{reconstructionError}</span>
+          <button type="button" className="notifDismiss" onClick={dismissReconstructionError} aria-label="Dismiss">×</button>
+        </div>
+      )}
+      {reconstructionWarning && !isReconstructing && !reconstructionError && (
+        <div className="notifBanner notifBannerWarning" role="status">
+          <span>{reconstructionWarning}</span>
+          <button type="button" className="notifDismiss" onClick={dismissReconstructionWarning} aria-label="Dismiss">×</button>
+        </div>
+      )}
+      {exportError && (
+        <div className="notifBanner notifBannerError" role="alert">
+          <span>{exportError}</span>
+          <button type="button" className="notifDismiss" onClick={dismissError} aria-label="Dismiss">×</button>
+        </div>
+      )}
+      {exportWarning && !exportError && (
+        <div className="notifBanner notifBannerWarning" role="status">
+          <span>{exportWarning}</span>
+          <button type="button" className="notifDismiss" onClick={dismissWarning} aria-label="Dismiss">×</button>
+        </div>
+      )}
+    </>
+  )
+
   return (
     <div className="app">
       <button
@@ -457,6 +508,7 @@ function App() {
         onBgColorChange={handleBgColorChange}
         onStyleStep={handleStyleStep}
         onTitleChange={handleTitleChange}
+        onTitleFontChange={handleTitleFontChange}
         onNameDisplayChange={handleNameDisplayChange}
         onDisplayModeChange={handleDisplayModeChange}
         onLayoutModeChange={handleLayoutModeChange}
@@ -496,19 +548,12 @@ function App() {
         onSlotClear={handleSlotClear}
         onSlotUpdate={handleSlotUpdate}
         onSlotMove={handleSlotMove}
+        onSlotFillAtIndex={handleSlotFillAtIndex}
         onFaceToggle={handleFaceToggle}
         selectedSlotIndex={selectedSlotIndex}
         onCellSelect={handleCellSelect}
         gridRef={gridRef}
-        exportError={exportError}
-        exportWarning={exportWarning}
-        onDismissError={dismissError}
-        onDismissWarning={dismissWarning}
-        isReconstructing={isReconstructing}
-        reconstructionError={reconstructionError}
-        reconstructionWarning={reconstructionWarning}
-        onDismissReconstructionError={dismissReconstructionError}
-        onDismissReconstructionWarning={dismissReconstructionWarning}
+        notifications={notifications}
       />
     </div>
   )
