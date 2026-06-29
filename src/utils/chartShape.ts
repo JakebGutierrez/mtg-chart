@@ -3,7 +3,26 @@ function isSlotShaped(el: unknown): boolean {
   if (typeof el !== 'object') return false
   const s = el as Record<string, unknown>
   if (s.kind === 'scryfall') {
-    return typeof s.scryfallId === 'string' && Array.isArray(s.imageUris)
+    if (typeof s.scryfallId !== 'string') return false
+    // imageUris must be a non-empty array of faces that each carry a string
+    // artCrop, and selectedFaceIndex (if present) must index within it. This
+    // rejects corrupt/tampered stored slots that would crash render/export (B8).
+    if (!Array.isArray(s.imageUris) || s.imageUris.length === 0) return false
+    const facesOk = s.imageUris.every(
+      (f) => typeof f === 'object' && f !== null && typeof (f as Record<string, unknown>).artCrop === 'string',
+    )
+    if (!facesOk) return false
+    if (s.selectedFaceIndex !== undefined) {
+      if (
+        typeof s.selectedFaceIndex !== 'number' ||
+        !Number.isInteger(s.selectedFaceIndex) ||
+        s.selectedFaceIndex < 0 ||
+        s.selectedFaceIndex >= s.imageUris.length
+      ) {
+        return false
+      }
+    }
+    return true
   }
   if (s.kind === 'custom') {
     return (

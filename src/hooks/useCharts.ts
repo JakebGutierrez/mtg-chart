@@ -5,6 +5,7 @@ import { migrateAll, CURRENT_SCHEMA_VERSION } from '@/utils/schemaVersion'
 import { decodeSharePayload, reconstructSlots, type ShareSlotStub } from '@/utils/shareLink'
 import { isChartShaped } from '@/utils/chartShape'
 import { fetchCollectionSlots } from '@/utils/reconstruct'
+import { sanitizeChartConfig, chartCapacity } from '@/utils/sanitizeChart'
 
 const CHARTS_KEY = 'mtg-chart:charts'
 const ACTIVE_ID_KEY = 'mtg-chart:activeId'
@@ -98,7 +99,7 @@ function readStoredCharts(): Chart[] {
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isChartShaped)) {
-      return migrateAll(parsed as Chart[])
+      return migrateAll(parsed as Chart[]).map(sanitizeChartConfig)
     }
   } catch { /* ignore */ }
   return []
@@ -111,7 +112,7 @@ function loadFromStorageOrDefault(): ChartsState {
     if (chartsJson) {
       const parsed: unknown = JSON.parse(chartsJson)
       if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isChartShaped)) {
-        const charts = migrateAll(parsed as Chart[])
+        const charts = migrateAll(parsed as Chart[]).map(sanitizeChartConfig)
         const activeId =
           storedActiveId && charts.some((c) => c.id === storedActiveId)
             ? storedActiveId
@@ -233,17 +234,21 @@ export function loadOrInit(): ChartsState {
 
     if (result.kind === 'compact') {
       const existingCharts = readStoredCharts()
-      const placeholder: Chart = {
+      // Sanitize the decoded chart config (clamp dims, drop bad hero items, safe
+      // bg) before it reaches state, then cap the stub array to grid capacity so
+      // a crafted link can't force excessive reconstruction work.
+      const placeholder = sanitizeChartConfig({
         ...result.payload.c,
         id: crypto.randomUUID(),
         schemaVersion: CURRENT_SCHEMA_VERSION,
         slots: [],
-      }
+      })
+      const capacity = chartCapacity(placeholder.gridRows, placeholder.gridCols, placeholder.heroConfig)
       return {
         charts: [...existingCharts, placeholder],
         activeId: placeholder.id,
         consumedShareParam: true,
-        pendingReconstruction: result.payload.s,
+        pendingReconstruction: result.payload.s.slice(0, capacity),
         isReconstructing: true,
         unreconstructedPlaceholderId: placeholder.id,
       }
@@ -251,7 +256,7 @@ export function loadOrInit(): ChartsState {
 
     if (result.kind === 'legacy') {
       const existingCharts = readStoredCharts()
-      const chart = { ...result.chart, id: crypto.randomUUID() }
+      const chart = sanitizeChartConfig({ ...result.chart, id: crypto.randomUUID() })
       return { charts: [...existingCharts, chart], activeId: chart.id, consumedShareParam: true }
     }
 

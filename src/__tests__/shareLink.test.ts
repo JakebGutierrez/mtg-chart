@@ -227,10 +227,19 @@ describe('decodeSharePayload — unknown version', () => {
 describe('reconstructSlots', () => {
   const boltSlot = makeScryfallSlot({ scryfallId: 'bolt-id', cardName: 'Lightning Bolt' })
   const walkSlot = makeScryfallSlot({ scryfallId: 'walk-id', cardName: 'Ancestral Recall' })
+  const dfcSlot = makeScryfallSlot({
+    scryfallId: 'dfc-id',
+    cardName: 'Delver of Secrets',
+    imageUris: [
+      { artCrop: 'https://x/front.jpg', normal: 'https://x/front-n.jpg' },
+      { artCrop: 'https://x/back.jpg', normal: 'https://x/back-n.jpg' },
+    ],
+  })
 
   const cardMap = new Map<string, ScryfallSlot>([
     ['bolt-id', boltSlot],
     ['walk-id', walkSlot],
+    ['dfc-id', dfcSlot],
   ])
 
   it('maps stubs to slots in order', () => {
@@ -262,13 +271,19 @@ describe('reconstructSlots', () => {
     expect(slot.cropScale).toBeCloseTo(1.0)
   })
 
-  it('applies non-default stub overrides', () => {
-    const stubs: Array<ShareSlotStub | null> = [{ id: 'bolt-id', f: 1, x: 0.2, y: 0.8, z: 2.0 }]
+  it('applies non-default stub overrides for a real two-face card', () => {
+    const stubs: Array<ShareSlotStub | null> = [{ id: 'dfc-id', f: 1, x: 0.2, y: 0.8, z: 2.0 }]
     const slots = reconstructSlots(stubs, cardMap)
     const slot = slots[0] as ScryfallSlot
     expect(slot.selectedFaceIndex).toBe(1)
     expect(slot.cropX).toBeCloseTo(0.2)
     expect(slot.cropY).toBeCloseTo(0.8)
     expect(slot.cropScale).toBeCloseTo(2.0)
+  })
+
+  it('clamps a tampered f:1 on a single-face card to face 0 (B8)', () => {
+    const stubs: Array<ShareSlotStub | null> = [{ id: 'bolt-id', f: 1 }]
+    const slots = reconstructSlots(stubs, cardMap)
+    expect((slots[0] as ScryfallSlot).selectedFaceIndex).toBe(0)
   })
 })

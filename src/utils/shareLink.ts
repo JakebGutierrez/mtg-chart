@@ -170,9 +170,13 @@ export function reconstructSlots(
     if (stub === null) return null
     const slot = cardMap.get(stub.id)
     if (!slot) return null
+    // Clamp the face index into the reconstructed card's actual face count: a
+    // tampered link could carry f:1 for a card that only has one face, which
+    // would otherwise index out of bounds and crash render/export (B8).
+    const faceIndex = Math.min(stub.f ?? 0, slot.imageUris.length - 1)
     return {
       ...slot,
-      selectedFaceIndex: stub.f ?? 0,
+      selectedFaceIndex: (faceIndex < 0 ? 0 : faceIndex) as 0 | 1,
       cropX: stub.x ?? 0.5,
       cropY: stub.y ?? 0.5,
       cropScale: stub.z ?? 1.0,
