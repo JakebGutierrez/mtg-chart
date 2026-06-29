@@ -67,6 +67,7 @@ export interface ScryfallCard {
 export interface ScryfallSearchResponse {
   data: ScryfallCard[]
   has_more: boolean
+  next_page?: string
   total_cards: number
 }
 
@@ -159,4 +160,72 @@ export async function fetchCardById(scryfallId: string): Promise<ScryfallSlot | 
   if (!res.ok) return null
   const card = (await res.json()) as ScryfallCard
   return normaliseCard(card)
+}
+
+// Distinct error so the printing switcher can show "too many requests" rather
+// than a generic failure when Scryfall rate-limits pagination.
+export class PrintingsRateLimitError extends Error {
+  constructor() {
+    super('rate-limited')
+    this.name = 'PrintingsRateLimitError'
+  }
+}
+
+export interface PrintingsResult {
+  printings: PrintingMeta[]
+  // True when the page cap was reached while Scryfall still had more results —
+  // so the UI can say results are truncated instead of dropping them silently.
+  truncated: boolean
+}
+
+export interface FetchPrintingsDeps {
+  fetch: typeof globalThis.fetch
+  signal?: AbortSignal
+  sleep?: (ms: number) => Promise<void>
+  maxPages?: number
+}
+
+const PRINTINGS_PAGE_DELAY_MS = 100
+const PRINTINGS_MAX_PAGES = 5
+
+// Fetches every printing of a card by following Scryfall's has_more/next_page
+// pagination (a single page caps at 175, which silently truncated high-printing
+// cards like basics and Sol Ring — A3). Bounded by maxPages with a small
+// inter-page delay; reports `truncated` if the cap is hit with more remaining.
+export async function fetchAllPrintings(
+  oracleId: string,
+  deps: FetchPrintingsDeps,
+): Promise<PrintingsResult> {
+  const { fetch, signal } = deps
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
+  const maxPages = deps.maxPages ?? PRINTINGS_MAX_PAGES
+
+  const printings: PrintingMeta[] = []
+  let url: string | undefined = buildPrintingsUrl(oracleId)
+  let page = 0
+  let truncated = false
+
+  while (url) {
+    if (page > 0) await sleep(PRINTINGS_PAGE_DELAY_MS)
+    const res = await fetch(url, { signal })
+    if (res.status === 429) throw new PrintingsRateLimitError()
+    if (!res.ok) throw new Error(`Scryfall search returned ${res.status}`)
+    const data = (await res.json()) as ScryfallSearchResponse
+    for (const card of data.data) {
+      const p = normalisePrinting(card)
+      if (p) printings.push(p)
+    }
+    page++
+    if (data.has_more && data.next_page) {
+      if (page >= maxPages) {
+        truncated = true
+        break
+      }
+      url = data.next_page
+    } else {
+      url = undefined
+    }
+  }
+
+  return { printings, truncated }
 }

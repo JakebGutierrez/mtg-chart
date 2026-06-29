@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Slot, ScryfallSlot } from '@/types/chart'
-import {
-  buildPrintingsUrl,
-  normalisePrinting,
-  type PrintingMeta,
-  type ScryfallSearchResponse,
-} from '@/utils/scryfall'
+import { fetchAllPrintings, PrintingsRateLimitError, type PrintingMeta } from '@/utils/scryfall'
 import styles from './PrintingSwitcher.module.css'
 
 interface Props {
@@ -19,34 +14,28 @@ export default function PrintingSwitcher({ currentSlot, onSelect, onClose }: Pro
   const [printings, setPrintings] = useState<PrintingMeta[]>([])
   const [loading, setLoading] = useState(true)   // always starts loading on mount
   const [error, setError] = useState<string | null>(null)
+  const [truncated, setTruncated] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const controller = new AbortController()
 
-    fetch(buildPrintingsUrl(currentSlot.oracleId), { signal: controller.signal })
-      .then(async (res) => {
-        if (res.status === 429) {
-          setError('Too many requests — please wait.')
-          setLoading(false)
-          return
-        }
-        if (!res.ok) {
-          setError('Failed to load printings.')
-          setLoading(false)
-          return
-        }
-        const data: ScryfallSearchResponse = await res.json()
-        const options = data.data.flatMap((card) => {
-          const p = normalisePrinting(card)
-          return p ? [p] : []
-        })
-        setPrintings(options)
+    fetchAllPrintings(currentSlot.oracleId, {
+      fetch: globalThis.fetch.bind(globalThis),
+      signal: controller.signal,
+    })
+      .then((result) => {
+        setPrintings(result.printings)
+        setTruncated(result.truncated)
         setLoading(false)
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
-        setError('Failed to load printings.')
+        setError(
+          err instanceof PrintingsRateLimitError
+            ? 'Too many requests — please wait.'
+            : 'Failed to load printings.',
+        )
         setLoading(false)
       })
 
@@ -124,6 +113,11 @@ export default function PrintingSwitcher({ currentSlot, onSelect, onClose }: Pro
                 </button>
               ))}
             </div>
+          )}
+          {!loading && !error && truncated && (
+            <p className={styles.message}>
+              Showing the first {printings.length} printings — some couldn’t be loaded.
+            </p>
           )}
         </div>
       </div>
