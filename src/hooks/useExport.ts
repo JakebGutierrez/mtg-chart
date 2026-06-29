@@ -189,7 +189,11 @@ export function useExport(
         const slot = getSlot(chart, cell.slotIndex)!
 
         if (slot.kind === 'custom') {
-          imgBySlot.set(cell.slotIndex, await loadImage(slot.localImageDataUrl))
+          try {
+            imgBySlot.set(cell.slotIndex, await loadImage(slot.localImageDataUrl))
+          } catch (e) {
+            throw new Error(`Failed to load image for "${slot.label}". Try again.`, { cause: e })
+          }
           continue
         }
 

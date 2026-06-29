@@ -43,8 +43,8 @@ function App() {
   const {
     charts, activeId, activeChart,
     createChart, deleteChart, updateChart, renameChart, setActiveId,
-    isReconstructing, reconstructionError, reconstructionWarning,
-    dismissReconstructionError, dismissReconstructionWarning,
+    isReconstructing, reconstructionError, reconstructionWarning, storageError,
+    dismissReconstructionError, dismissReconstructionWarning, dismissStorageError,
   } = useCharts()
 
   // Option B: per-chart undo/redo history lives here in App, above useCharts.
@@ -452,6 +452,12 @@ function App() {
 
   const notifications = (
     <>
+      {storageError && (
+        <div className="notifBanner notifBannerError" role="alert">
+          <span>{storageError}</span>
+          <button type="button" className="notifDismiss" onClick={dismissStorageError} aria-label="Dismiss">×</button>
+        </div>
+      )}
       {isReconstructing && (
         <div className="notifBanner notifBannerInfo" role="status" aria-live="polite">
           Loading cards from shared link…

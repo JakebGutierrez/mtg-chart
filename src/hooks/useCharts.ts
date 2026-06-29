@@ -17,6 +17,81 @@ function persist(charts: Chart[], activeId: string): void {
   localStorage.setItem(ACTIVE_ID_KEY, activeId)
 }
 
+const STORAGE_FULL_MESSAGE =
+  'Could not save — browser storage is full. Recent changes are kept in memory but may be lost if you close the tab.'
+const PERSIST_DEBOUNCE_MS = 300
+
+// Wraps persist so a storage failure (quota exceeded, storage disabled/blocked)
+// never throws out of the persistence effect and crashes the React tree. Returns
+// { ok: false } instead — the in-memory chart keeps working, only the save failed.
+export function safeWrite(charts: Chart[], activeId: string): { ok: boolean } {
+  try {
+    persist(charts, activeId)
+    return { ok: true }
+  } catch {
+    return { ok: false }
+  }
+}
+
+// Idempotent storageError transition. A successful write clears the error; a
+// failure sets the message but returns an already-present one *by reference* so a
+// storageError setState cannot re-enter the persist effect and retry the failing
+// write (no quota retry loop).
+export function nextStorageError(prev: string | undefined, ok: boolean): string | undefined {
+  if (ok) return undefined
+  return prev ?? STORAGE_FULL_MESSAGE
+}
+
+export interface PersistScheduler {
+  schedule: (charts: Chart[], activeId: string) => void
+  flush: () => void
+  cancel: () => void
+}
+
+// Trailing-edge debounce around a write function. Coalesces the per-frame write
+// stream from live crop drags / title typing into a single localStorage write,
+// while the trailing edge still persists the final value (no drag-end event
+// needed). flush() forces a pending write immediately — used on pagehide so a
+// debounced change survives a tab close inside the debounce window.
+export function createPersistScheduler(
+  write: (charts: Chart[], activeId: string) => { ok: boolean },
+  onResult: (ok: boolean) => void,
+  delayMs: number,
+): PersistScheduler {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let pending: { charts: Chart[]; activeId: string } | null = null
+
+  const run = () => {
+    timer = null
+    if (!pending) return
+    const { charts, activeId } = pending
+    pending = null
+    onResult(write(charts, activeId).ok)
+  }
+
+  return {
+    schedule(charts, activeId) {
+      pending = { charts, activeId }
+      if (timer !== null) clearTimeout(timer)
+      timer = setTimeout(run, delayMs)
+    },
+    flush() {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      run()
+    },
+    cancel() {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      pending = null
+    },
+  }
+}
+
 function readStoredCharts(): Chart[] {
   try {
     const raw = localStorage.getItem(CHARTS_KEY)
@@ -66,6 +141,7 @@ interface ChartsState {
   isReconstructing?: boolean
   reconstructionError?: string
   reconstructionWarning?: string
+  storageError?: string
 }
 
 // Does not call persist() — the useEffect in useCharts handles all writes.
@@ -113,6 +189,7 @@ export function useCharts(): {
   isReconstructing: boolean
   reconstructionError: string | null
   reconstructionWarning: string | null
+  storageError: string | null
   createChart: () => void
   deleteChart: (id: string) => void
   updateChart: (updater: (prev: Chart) => Chart) => void
@@ -120,6 +197,7 @@ export function useCharts(): {
   setActiveId: (id: string) => void
   dismissReconstructionError: () => void
   dismissReconstructionWarning: () => void
+  dismissStorageError: () => void
 } {
   const [state, setState] = useState<ChartsState>(loadOrInit)
 
@@ -231,13 +309,47 @@ export function useCharts(): {
     return () => controller.abort()
   }, [])
 
-  // Persist after every settled state change. Suppressed while isReconstructing
-  // so the empty placeholder chart is never written before reconstruction
-  // resolves — on failure the placeholder is removed and existing charts persist.
+  // Stable debounced persistence scheduler — created once, survives re-renders.
+  // safeWrite never throws; a quota/storage failure flips storageError via the
+  // idempotent nextStorageError transition.
+  const schedulerRef = useRef<PersistScheduler | null>(null)
+  if (schedulerRef.current === null) {
+    schedulerRef.current = createPersistScheduler(
+      safeWrite,
+      (ok) =>
+        setState((prev) => {
+          const nextErr = nextStorageError(prev.storageError, ok)
+          return nextErr === prev.storageError ? prev : { ...prev, storageError: nextErr }
+        }),
+      PERSIST_DEBOUNCE_MS,
+    )
+  }
+
+  // Schedule a debounced write after every settled state change. Suppressed while
+  // isReconstructing so the empty placeholder is never written before reconstruction
+  // resolves. Deps are narrowed to the persisted slice (+ isReconstructing) so a
+  // storageError setState cannot re-enter this effect and retry a failing write.
   useEffect(() => {
     if (state.isReconstructing) return
-    persist(state.charts, state.activeId)
-  }, [state])
+    schedulerRef.current!.schedule(state.charts, state.activeId)
+  }, [state.charts, state.activeId, state.isReconstructing])
+
+  // Flush a pending debounced write when the tab is hidden/closed so the last
+  // change isn't lost inside the debounce window. cancel() on unmount avoids a
+  // late setState from a timer firing after teardown.
+  useEffect(() => {
+    const flush = () => schedulerRef.current?.flush()
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVisibility)
+      schedulerRef.current?.cancel()
+    }
+  }, [])
 
   const { charts, activeId } = state
   const activeChart = charts.find((c) => c.id === activeId) ?? charts[0]
@@ -306,6 +418,10 @@ export function useCharts(): {
     setState((prev) => ({ ...prev, reconstructionWarning: undefined }))
   }, [])
 
+  const dismissStorageError = useCallback(() => {
+    setState((prev) => (prev.storageError ? { ...prev, storageError: undefined } : prev))
+  }, [])
+
   return {
     charts,
     activeId,
@@ -313,6 +429,7 @@ export function useCharts(): {
     isReconstructing: state.isReconstructing ?? false,
     reconstructionError: state.reconstructionError ?? null,
     reconstructionWarning: state.reconstructionWarning ?? null,
+    storageError: state.storageError ?? null,
     createChart,
     deleteChart,
     updateChart,
@@ -320,5 +437,6 @@ export function useCharts(): {
     setActiveId,
     dismissReconstructionError,
     dismissReconstructionWarning,
+    dismissStorageError,
   }
 }
