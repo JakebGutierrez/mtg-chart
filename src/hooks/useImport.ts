@@ -1,9 +1,8 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
-import type { Chart, Slot, CellDef } from '@/types/chart'
-import { getSlot } from '@/utils/chart'
-import { generateCellMap } from '@/utils/cellMap'
+import type { Chart, Slot } from '@/types/chart'
 import { buildImportUrl, normaliseCard, type ScryfallCard } from '@/utils/scryfall'
 import { parseDecklistText, type DecklistEntry } from '@/utils/decklistParser'
+import { getEmptySlotIndices, getExpansionSlotIndices } from '@/utils/importLayout'
 
 export interface FailedCard {
   name: string
@@ -33,14 +32,6 @@ export interface UseImportReturn {
 interface Assignment {
   slotIndex: number
   entry: DecklistEntry
-}
-
-function getEmptySlotIndices(chart: Chart): number[] {
-  const cellMap = generateCellMap(chart.gridRows, chart.gridCols, chart.heroConfig)
-  return cellMap
-    .filter((c): c is Exclude<CellDef, { kind: 'covered' }> => c.kind !== 'covered')
-    .filter((c) => getSlot(chart, c.slotIndex) === null)
-    .map((c) => c.slotIndex)
 }
 
 function sleep(ms: number): Promise<void> {
@@ -258,11 +249,10 @@ export function useImport(
     const extraRows = Math.max(0, Math.ceil(needed / chartRef.current.gridCols))
     const newRows = Math.min(chartRef.current.gridRows + extraRows, 10)
 
-    const existingTotal = chartRef.current.gridRows * chartRef.current.gridCols
-    const addedSlots = Array.from(
-      { length: (newRows - chartRef.current.gridRows) * chartRef.current.gridCols },
-      (_, i) => existingTotal + i,
-    )
+    // Indices of the newly added cells, derived from the cellMap so hybrid
+    // (commander/partner) layouts place cards in real cells instead of skipping/
+    // overshooting (B9).
+    const addedSlots = getExpansionSlotIndices(chartRef.current, newRows)
     const allSlots = [...emptySlots, ...addedSlots]
 
     failedRef.current = []
