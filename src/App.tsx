@@ -10,6 +10,8 @@ import { useCharts } from '@/hooks/useCharts'
 import { sortSlots, shuffleSlots } from '@/utils/sort'
 import type { SortKey } from '@/utils/sort'
 import { encodeShareLink } from '@/utils/shareLink'
+import { isEditableEventTarget } from '@/utils/dom'
+import { pushPast, shouldPushSnapshot } from '@/utils/history'
 import type { Chart, Slot, ScryfallSlot, CellDef, NumericStyleField, NameDisplayMode, DisplayMode, Layout, HeroConfig } from '@/types/chart'
 
 type LayoutMode = 'uniform' | 'commander' | 'partner'
@@ -53,6 +55,11 @@ function App() {
   // Only content mutations push history; chart-level ops and handleSlotImageUpdate do not.
   const [history, setHistory] = useState<History>({ past: [], future: [] })
 
+  // The field currently being edited as a coalesced burst (title typing / colour
+  // dragging), or null. Any non-coalesced history push resets it so the next
+  // title/colour edit starts a fresh undo entry (B4).
+  const editBurstFieldRef = useRef<'title' | 'bgColor' | null>(null)
+
   // Wraps updateChart with history push. Runs the updater against activeChart first to
   // detect no-ops (same reference returned) and skip the history push in that case.
   // Known tradeoff: the no-op check runs on render-time activeChart while updateChart
@@ -62,12 +69,24 @@ function App() {
   // with user interactions in this app.
   const updateChartWithHistory = useCallback(
     (updater: (prev: Chart) => Chart) => {
+      editBurstFieldRef.current = null
       if (updater(activeChart) !== activeChart) {
-        setHistory((h) => ({
-          past: [...h.past.slice(-49), activeChart],
-          future: [],
-        }))
+        setHistory((h) => ({ past: pushPast(h.past, activeChart), future: [] }))
       }
+      updateChart(updater)
+    },
+    [updateChart, activeChart],
+  )
+
+  // Coalesce a burst of same-field edits into a single history snapshot, pushed on
+  // the FIRST actual change (not on focus, so focus-then-blur with no edit adds no
+  // undo entry). A different field or any other history push starts a new burst.
+  const applyCoalescedEdit = useCallback(
+    (field: 'title' | 'bgColor', updater: (prev: Chart) => Chart) => {
+      if (shouldPushSnapshot(editBurstFieldRef.current, field) && updater(activeChart) !== activeChart) {
+        setHistory((h) => ({ past: pushPast(h.past, activeChart), future: [] }))
+      }
+      editBurstFieldRef.current = field
       updateChart(updater)
     },
     [updateChart, activeChart],
@@ -107,6 +126,7 @@ function App() {
 
   const undo = useCallback(() => {
     if (history.past.length === 0) return
+    editBurstFieldRef.current = null
     const snapshot = history.past[history.past.length - 1]
     setHistory((h) => ({
       past: h.past.slice(0, -1),
@@ -118,9 +138,10 @@ function App() {
 
   const redo = useCallback(() => {
     if (history.future.length === 0) return
+    editBurstFieldRef.current = null
     const snapshot = history.future[0]
     setHistory((h) => ({
-      past: [...h.past.slice(-49), activeChart],
+      past: pushPast(h.past, activeChart),
       future: h.future.slice(1),
     }))
     setSelectedSlotIndex(null)
@@ -140,6 +161,9 @@ function App() {
       // slot indices and does not cancel on chart changes, so mutating the chart
       // mid-import can cause cards to land in the wrong slots.
       if (undoRedoRef.current.importActive) return
+      // Let the browser's native undo/redo handle Cmd/Ctrl+Z inside text fields
+      // instead of hijacking it for chart-level undo (B3).
+      if (isEditableEventTarget(e.target)) return
       // Cmd/Ctrl+Z = undo; Cmd/Ctrl+Shift+Z = redo; Ctrl+Y = redo (Windows)
       const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'z'
       const isRedo =
@@ -239,9 +263,9 @@ function App() {
 
   const handleBgColorChange = useCallback(
     (value: string) => {
-      updateChartWithHistory((prev) => ({ ...prev, backgroundColor: value }))
+      applyCoalescedEdit('bgColor', (prev) => ({ ...prev, backgroundColor: value }))
     },
-    [updateChartWithHistory],
+    [applyCoalescedEdit],
   )
 
   const handleStyleStep = useCallback(
@@ -269,9 +293,9 @@ function App() {
 
   const handleTitleChange = useCallback(
     (value: string) => {
-      updateChartWithHistory((prev) => ({ ...prev, title: value }))
+      applyCoalescedEdit('title', (prev) => ({ ...prev, title: value }))
     },
-    [updateChartWithHistory],
+    [applyCoalescedEdit],
   )
 
   const handleTitleFontChange = useCallback(
@@ -356,10 +380,8 @@ function App() {
   // apply live updates without history during the drag. This gives a single
   // undo step that reverts the entire drag, not one step per pixel moved.
   const handleCropDragBegin = useCallback(() => {
-    setHistory((h) => ({
-      past: [...h.past.slice(-49), activeChart],
-      future: [],
-    }))
+    editBurstFieldRef.current = null
+    setHistory((h) => ({ past: pushPast(h.past, activeChart), future: [] }))
   }, [activeChart])
 
   const handleCropLive = useCallback(
@@ -393,10 +415,8 @@ function App() {
 
   // Import: push a single undo snapshot before any cards are placed.
   const handleImportBegin = useCallback(() => {
-    setHistory((h) => ({
-      past: [...h.past.slice(-49), activeChart],
-      future: [],
-    }))
+    editBurstFieldRef.current = null
+    setHistory((h) => ({ past: pushPast(h.past, activeChart), future: [] }))
   }, [activeChart])
 
   // Import: place a card at a specific pre-assigned slot index (no history push per card).
