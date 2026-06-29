@@ -14,11 +14,12 @@ export interface FailedCard {
 
 export type ImportPhase =
   | { kind: 'idle' }
-  | { kind: 'overflow'; totalCards: number; availableSlots: number }
+  | { kind: 'overflow'; totalCards: number; availableSlots: number; unreadableCount: number }
   | { kind: 'importing'; progress: number; total: number }
   // `total` is the number of cards the user intended to import in this run —
   // may exceed succeeded + failed.length if the 10-row cap silently cut some.
-  | { kind: 'done'; succeeded: number; failed: FailedCard[]; total: number }
+  // `unreadableCount` is the number of input lines that couldn't be read as a card.
+  | { kind: 'done'; succeeded: number; failed: FailedCard[]; total: number; unreadableCount: number }
 
 export interface UseImportReturn {
   phase: ImportPhase
@@ -144,6 +145,9 @@ export function useImport(
   // equals expanded.length, which may exceed what actually fits when the 10-row
   // cap is hit — surfacing that gap to the done-screen denominator.
   const totalRef = useRef(0)
+  // Lines that couldn't be read as a card in the most recent parse, carried to
+  // the overflow/done screens.
+  const unreadableRef = useRef(0)
 
   // Callback refs kept fresh via useLayoutEffect (same pattern as App.tsx undoRedoRef).
   const onImportBeginRef = useRef(onImportBegin)
@@ -206,15 +210,29 @@ export function useImport(
       const allFailed = [...failedRef.current, ...newFailed]
       totalSucceededRef.current += succeeded
       failedRef.current = allFailed
-      setPhase({ kind: 'done', succeeded: totalSucceededRef.current, failed: allFailed, total: totalRef.current })
+      setPhase({
+        kind: 'done',
+        succeeded: totalSucceededRef.current,
+        failed: allFailed,
+        total: totalRef.current,
+        unreadableCount: unreadableRef.current,
+      })
     },
     [],
   )
 
   const begin = useCallback(
     (text: string, fillQuantity: boolean) => {
-      const entries = parseDecklistText(text)
-      if (entries.length === 0) return
+      const { entries, unreadableCount } = parseDecklistText(text)
+      unreadableRef.current = unreadableCount
+      if (entries.length === 0) {
+        // Nothing importable, but still tell the user if real-looking lines were
+        // unreadable rather than closing silently.
+        if (unreadableCount > 0) {
+          setPhase({ kind: 'done', succeeded: 0, failed: [], total: 0, unreadableCount })
+        }
+        return
+      }
 
       const expanded = expandEntries(entries, fillQuantity)
       const totalCards = expanded.length
@@ -223,7 +241,7 @@ export function useImport(
       pendingRef.current = { entries, fillQuantity }
 
       if (totalCards > emptySlots.length) {
-        setPhase({ kind: 'overflow', totalCards, availableSlots: emptySlots.length })
+        setPhase({ kind: 'overflow', totalCards, availableSlots: emptySlots.length, unreadableCount })
         return
       }
 
@@ -307,6 +325,7 @@ export function useImport(
     failedRef.current = []
     totalSucceededRef.current = 0
     totalRef.current = 0
+    unreadableRef.current = 0
     setPhase({ kind: 'idle' })
   }, [])
 

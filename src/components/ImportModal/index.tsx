@@ -94,11 +94,18 @@ export default function ImportModal({ chart, onImportBegin, onSlotPlace, onExpan
           )}
 
           {isOverflow && phase.kind === 'overflow' && (
-            <p className={styles.warningText}>
-              This decklist has <strong>{phase.totalCards} cards</strong> but the grid only has{' '}
-              <strong>{phase.availableSlots} empty {phase.availableSlots === 1 ? 'slot' : 'slots'}</strong> available.
-              How would you like to proceed?
-            </p>
+            <>
+              <p className={styles.warningText}>
+                This decklist has <strong>{phase.totalCards} cards</strong> but the grid only has{' '}
+                <strong>{phase.availableSlots} empty {phase.availableSlots === 1 ? 'slot' : 'slots'}</strong> available.
+                How would you like to proceed?
+              </p>
+              {phase.unreadableCount > 0 && (
+                <p className={styles.warningText}>
+                  Also couldn’t read {phase.unreadableCount} line{phase.unreadableCount === 1 ? '' : 's'} — check the formatting.
+                </p>
+              )}
+            </>
           )}
 
           {isImporting && phase.kind === 'importing' && (
@@ -116,9 +123,16 @@ export default function ImportModal({ chart, onImportBegin, onSlotPlace, onExpan
 
           {isDone && phase.kind === 'done' && (
             <>
-              <p className={styles.summaryCount}>
-                Imported {phase.succeeded} / {phase.total} cards.
-              </p>
+              {phase.total > 0 && (
+                <p className={styles.summaryCount}>
+                  Imported {phase.succeeded} / {phase.total} cards.
+                </p>
+              )}
+              {phase.unreadableCount > 0 && (
+                <p className={styles.warningText}>
+                  Couldn’t read {phase.unreadableCount} line{phase.unreadableCount === 1 ? '' : 's'} — check the formatting.
+                </p>
+              )}
               {phase.failed.length > 0 && (
                 <>
                   <p className={styles.failedHeader}>Failed ({phase.failed.length})</p>
