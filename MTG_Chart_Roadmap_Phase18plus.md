@@ -117,6 +117,22 @@ Candidate set (Jakeb to finalise ~4–6): Cinzel (epic title), EB Garamond / Cor
 
 ---
 
+## Phase 22.5 — Pre-overhaul hardening (logic only, no UI redesign)
+
+A dedicated stabilisation phase between Phase 22 and the Phase 23 overhaul, from a two-reviewer audit (`phase-22.5-findings.md`). Closes a cluster of crash, data-loss, and correctness issues independent of the UI surface. Accessibility (A4 grid keyboard, A5 modal focus / `<progress>` label) is deliberately folded into Phase 23; B10/B11 deferred past the overhaul. Each checkpoint pairs its fix with a test and commits with the suite green; no `schemaVersion` bump (no fix adds a non-optional persisted field).
+
+- **CP1 Persistence safety + error boundary** (A1/B2/B12): wrap `persist` in try/catch (storage-full notice, no retry loop), top-level error boundary, debounced writes (trailing edge persists the final crop), guarded custom-image export.
+- **CP2 Share-load resilience** (B1/B5): strip `?c=` only after reconstruction succeeds (legacy links strip on synchronous decode); on failure keep a named placeholder + Retry and leave `?c=` intact; the failed placeholder is excluded from persistence so reload yields exactly one; 429 treated as retryable with an inter-chunk delay.
+- **CP3 Decode hardening** (A2/B7/B8): clamp grid dims to 1–10 (robust to non-finite/decimal), validate & sanitize `heroConfig` items, cap slot/stub arrays to grid capacity, validate background colour, clamp/guard face indices — on every decode path.
+- **CP4 Hybrid import indexing** (B9): derive expansion slot indices from the cellMap, not `rows×cols`, so commander/partner imports don't misplace or drop cards.
+- **CP5 Undo correctness** (B3/B4): ignore undo/redo keys inside text fields; coalesce title/colour edit bursts into one snapshot, pushed on the first actual change (no phantom undo entries).
+- **CP6 Printing pagination** (A3): follow `has_more`/`next_page` in the printing switcher; if a page cap is hit while more remain, surface a truncation notice rather than silently dropping printings.
+- **CP7 Decklist parser** (B6): bare name = quantity 1; accept `3`/`3x`/`3X`; `100 Forest` is a card name at quantity 1 (intentional for a collage tool); surface a "couldn't read N lines" count instead of silently dropping junk.
+
+**Done:** all seven checkpoints landed with build, lint, and tests green; A4/A5 carried into Phase 23.
+
+---
+
 ## Phase 23 — Tabbed UI overhaul + full responsive (large, design-first)
 
 Replaces the current single long sidebar (and the stopgap mobile drawer) with a tabbed control surface and a proper responsive layout.
