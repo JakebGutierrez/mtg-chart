@@ -44,6 +44,7 @@ function App() {
     charts, activeId, activeChart,
     createChart, deleteChart, updateChart, renameChart, setActiveId,
     isReconstructing, reconstructionError, reconstructionWarning, storageError,
+    canRetryReconstruction, retryReconstruction,
     dismissReconstructionError, dismissReconstructionWarning, dismissStorageError,
   } = useCharts()
 
@@ -466,6 +467,9 @@ function App() {
       {reconstructionError && !isReconstructing && (
         <div className="notifBanner notifBannerError" role="alert">
           <span>{reconstructionError}</span>
+          {canRetryReconstruction && (
+            <button type="button" className="notifAction" onClick={retryReconstruction}>Retry</button>
+          )}
           <button type="button" className="notifDismiss" onClick={dismissReconstructionError} aria-label="Dismiss">×</button>
         </div>
       )}

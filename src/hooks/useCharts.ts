@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { Chart, ScryfallSlot } from '@/types/chart'
+import type { Chart, Slot } from '@/types/chart'
 import { createDefaultChart } from '@/utils/defaultChart'
 import { migrateAll, CURRENT_SCHEMA_VERSION } from '@/utils/schemaVersion'
 import { decodeSharePayload, reconstructSlots, type ShareSlotStub } from '@/utils/shareLink'
 import { isChartShaped } from '@/utils/chartShape'
-import { normaliseCard, type ScryfallCard } from '@/utils/scryfall'
+import { fetchCollectionSlots } from '@/utils/reconstruct'
 
 const CHARTS_KEY = 'mtg-chart:charts'
 const ACTIVE_ID_KEY = 'mtg-chart:activeId'
@@ -126,12 +126,7 @@ function loadFromStorageOrDefault(): ChartsState {
   return { charts: [fresh], activeId: fresh.id }
 }
 
-interface CollectionResponse {
-  data: ScryfallCard[]
-  not_found: unknown[]
-}
-
-interface ChartsState {
+export interface ChartsState {
   charts: Chart[]
   activeId: string
   // Set to true only when loadOrInit decoded a valid share-link param.
@@ -142,6 +137,90 @@ interface ChartsState {
   reconstructionError?: string
   reconstructionWarning?: string
   storageError?: string
+  // Id of a share-link placeholder whose slots haven't reconstructed yet. While
+  // set, the placeholder is excluded from persistence (so a reload re-derives it
+  // from the still-present ?c= rather than duplicating it). Cleared on success;
+  // retained on failure so retry/reload keep working.
+  unreconstructedPlaceholderId?: string
+}
+
+const RECONSTRUCTION_FAIL_MESSAGE =
+  "Couldn't load cards from the shared link — check your connection or Scryfall's status, then Retry."
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function stripShareParam(): void {
+  const url = new URL(window.location.href)
+  url.searchParams.delete('c')
+  window.history.replaceState(null, '', url.toString())
+}
+
+// Charts to write to localStorage: everything except an un-reconstructed share
+// placeholder. Excluding it means a failed share-load that keeps ?c= in the URL
+// re-derives exactly one placeholder on reload instead of accumulating duplicates.
+export function chartsToPersist(charts: Chart[], excludeId: string | undefined): Chart[] {
+  if (!excludeId) return charts
+  return charts.filter((c) => c.id !== excludeId)
+}
+
+// Reconstruction succeeded: fill the placeholder's slots and clear all
+// reconstruction flags (including the persistence exclusion). If the placeholder
+// was deleted mid-fetch, just clear the flags.
+export function applyReconstructionSuccess(
+  prev: ChartsState,
+  placeholderId: string,
+  slots: Array<Slot | null>,
+  warningCount: number,
+): ChartsState {
+  const prevChart = prev.charts.find((c) => c.id === placeholderId)
+  if (!prevChart) {
+    return {
+      ...prev,
+      pendingReconstruction: undefined,
+      isReconstructing: false,
+      unreconstructedPlaceholderId: undefined,
+    }
+  }
+  const updatedChart = { ...prevChart, slots }
+  return {
+    ...prev,
+    charts: prev.charts.map((c) => (c.id === updatedChart.id ? updatedChart : c)),
+    pendingReconstruction: undefined,
+    isReconstructing: false,
+    reconstructionError: undefined,
+    unreconstructedPlaceholderId: undefined,
+    reconstructionWarning:
+      warningCount > 0
+        ? `${warningCount} card(s) from the shared link could not be found or loaded.`
+        : undefined,
+  }
+}
+
+// Reconstruction failed: KEEP the named placeholder (empty grid), surface a
+// retryable error, and retain both the stubs and the persistence exclusion so
+// Retry (in-app) and reload (?c= still present) both work without deleting the
+// chart. If the placeholder was deleted mid-fetch, just clear the flags.
+export function applyReconstructionFailure(
+  prev: ChartsState,
+  placeholderId: string,
+  message: string,
+): ChartsState {
+  if (!prev.charts.some((c) => c.id === placeholderId)) {
+    return {
+      ...prev,
+      pendingReconstruction: undefined,
+      isReconstructing: false,
+      unreconstructedPlaceholderId: undefined,
+    }
+  }
+  return {
+    ...prev,
+    isReconstructing: false,
+    reconstructionError: message,
+    // pendingReconstruction + unreconstructedPlaceholderId retained for retry/reload.
+  }
 }
 
 // Does not call persist() — the useEffect in useCharts handles all writes.
@@ -166,6 +245,7 @@ export function loadOrInit(): ChartsState {
         consumedShareParam: true,
         pendingReconstruction: result.payload.s,
         isReconstructing: true,
+        unreconstructedPlaceholderId: placeholder.id,
       }
     }
 
@@ -190,6 +270,8 @@ export function useCharts(): {
   reconstructionError: string | null
   reconstructionWarning: string | null
   storageError: string | null
+  canRetryReconstruction: boolean
+  retryReconstruction: () => void
   createChart: () => void
   deleteChart: (id: string) => void
   updateChart: (updater: (prev: Chart) => Chart) => void
@@ -208,106 +290,64 @@ export function useCharts(): {
   const pendingReconstructionRef = useRef(state.pendingReconstruction ?? null)
   const placeholderIdRef = useRef(state.activeId)
 
-  // Strip ?c= only when loadOrInit successfully decoded a share link.
-  // A malformed or unrelated ?c= param leaves the URL unchanged.
+  // Strip ?c= immediately only for synchronous successes — legacy links, which
+  // never reconstruct. Decode errors don't set consumedShareParam, so their URL
+  // is left intact. Compact links defer the strip to reconstruction success
+  // (below) so a failed load keeps ?c= in the URL for reload-retry.
   useEffect(() => {
-    if (consumedShareParamRef.current) {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('c')
-      window.history.replaceState(null, '', url.toString())
+    if (consumedShareParamRef.current && pendingReconstructionRef.current === null) {
+      stripShareParam()
     }
   }, [])
 
-  // Reconstruct slots from Scryfall when a compact share link was decoded.
-  // Runs once on mount. AbortController cleanup handles StrictMode double-invoke
-  // and genuine unmount (e.g. user navigates away mid-fetch).
-  useEffect(() => {
-    const maybeStubs = pendingReconstructionRef.current
-    if (!maybeStubs) return
-    // Fresh binding so TypeScript infers the non-nullable type into the async closure
-    const stubs = maybeStubs
-
-    const placeholderId = placeholderIdRef.current
-    const controller = new AbortController()
-
-    async function run() {
+  // One reconstruction attempt for a placeholder. Shared by the mount effect and
+  // Retry. Strips ?c= only after success; on transient failure keeps the
+  // placeholder + stubs (applyReconstructionFailure) so Retry and reload both work.
+  const runReconstruction = useCallback(
+    async (stubs: Array<ShareSlotStub | null>, placeholderId: string, signal: AbortSignal) => {
       try {
-        const nonNullStubs = stubs.filter((s): s is ShareSlotStub => s !== null)
-        const cardMap = new Map<string, ScryfallSlot>()
-        let notFoundCount = 0
-        let normaliseFailCount = 0
-
-        for (let i = 0; i < nonNullStubs.length; i += 75) {
-          const chunk = nonNullStubs.slice(i, i + 75)
-          const res = await fetch('https://api.scryfall.com/cards/collection', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ identifiers: chunk.map((s) => ({ id: s.id })) }),
-            signal: controller.signal,
-          })
-          if (!res.ok) throw new Error(`Scryfall collection returned ${res.status}`)
-          const body = (await res.json()) as CollectionResponse
-          notFoundCount += body.not_found.length
-          for (const card of body.data) {
-            const slot = normaliseCard(card)
-            if (!slot) { normaliseFailCount++; continue }
-            cardMap.set(card.id, slot)
-          }
-        }
-
+        const { cardMap, notFoundCount, normaliseFailCount } = await fetchCollectionSlots(stubs, {
+          fetch: globalThis.fetch.bind(globalThis),
+          sleep: delay,
+          signal,
+        })
         const slots = reconstructSlots(stubs, cardMap)
         const warningCount = notFoundCount + normaliseFailCount
-
-        setState((prev) => {
-          const prevChart = prev.charts.find((c) => c.id === placeholderId)
-          if (!prevChart) {
-            // Placeholder was deleted mid-fetch — discard result, just clear flags
-            return { ...prev, pendingReconstruction: undefined, isReconstructing: false }
-          }
-          const updatedChart = { ...prevChart, slots }
-          return {
-            ...prev,
-            charts: prev.charts.map((c) => (c.id === updatedChart.id ? updatedChart : c)),
-            pendingReconstruction: undefined,
-            isReconstructing: false,
-            reconstructionWarning:
-              warningCount > 0
-                ? `${warningCount} card(s) from the shared link could not be found or loaded.`
-                : undefined,
-          }
-        })
+        setState((prev) => applyReconstructionSuccess(prev, placeholderId, slots, warningCount))
+        stripShareParam()
       } catch (err) {
         if ((err as Error).name === 'AbortError') return
-
-        setState((prev) => {
-          const charts = prev.charts.filter((c) => c.id !== placeholderId)
-          if (charts.length === 0) {
-            const fresh = createDefaultChart()
-            return {
-              charts: [fresh],
-              activeId: fresh.id,
-              isReconstructing: false,
-              reconstructionError: 'Could not load cards from Scryfall. Check your connection.',
-            }
-          }
-          const activeId = charts.some((c) => c.id === prev.activeId)
-            ? prev.activeId
-            : charts[0].id
-          return {
-            ...prev,
-            charts,
-            activeId,
-            pendingReconstruction: undefined,
-            isReconstructing: false,
-            reconstructionError: 'Could not load cards from Scryfall. Check your connection.',
-          }
-        })
+        setState((prev) =>
+          applyReconstructionFailure(prev, placeholderId, RECONSTRUCTION_FAIL_MESSAGE),
+        )
       }
-    }
+    },
+    [],
+  )
 
-    void run()
+  // Reconstruct slots when a compact share link was decoded. Runs once on mount;
+  // AbortController cleanup handles StrictMode double-invoke and genuine unmount.
+  useEffect(() => {
+    const stubs = pendingReconstructionRef.current
+    if (!stubs) return
+    const controller = new AbortController()
+    void runReconstruction(stubs, placeholderIdRef.current, controller.signal)
     return () => controller.abort()
-  }, [])
+  }, [runReconstruction])
+
+  // Retry a failed reconstruction using the retained stubs. Re-enters the loading
+  // state and clears the error; the placeholder id is stable from mount.
+  const retryReconstruction = useCallback(() => {
+    const stubs = pendingReconstructionRef.current
+    if (!stubs) return
+    const placeholderId = placeholderIdRef.current
+    setState((prev) => {
+      if (!prev.charts.some((c) => c.id === placeholderId)) return prev
+      return { ...prev, isReconstructing: true, reconstructionError: undefined }
+    })
+    const controller = new AbortController()
+    void runReconstruction(stubs, placeholderId, controller.signal)
+  }, [runReconstruction])
 
   // Stable debounced persistence scheduler — created once, survives re-renders.
   // safeWrite never throws; a quota/storage failure flips storageError via the
@@ -325,14 +365,17 @@ export function useCharts(): {
     )
   }
 
-  // Schedule a debounced write after every settled state change. Suppressed while
-  // isReconstructing so the empty placeholder is never written before reconstruction
-  // resolves. Deps are narrowed to the persisted slice (+ isReconstructing) so a
-  // storageError setState cannot re-enter this effect and retry a failing write.
+  // Schedule a debounced write after every settled state change. An
+  // un-reconstructed share placeholder is excluded (chartsToPersist) so it isn't
+  // written before its slots resolve; an empty result (only that placeholder
+  // exists) is skipped rather than clobbering storage with []. Deps are narrowed
+  // to the persisted slice + exclusion id so a storageError setState cannot
+  // re-enter this effect and retry a failing write (no quota loop).
   useEffect(() => {
-    if (state.isReconstructing) return
-    schedulerRef.current!.schedule(state.charts, state.activeId)
-  }, [state.charts, state.activeId, state.isReconstructing])
+    const toPersist = chartsToPersist(state.charts, state.unreconstructedPlaceholderId)
+    if (toPersist.length === 0) return
+    schedulerRef.current!.schedule(toPersist, state.activeId)
+  }, [state.charts, state.activeId, state.unreconstructedPlaceholderId])
 
   // Flush a pending debounced write when the tab is hidden/closed so the last
   // change isn't lost inside the debounce window. cancel() on unmount avoids a
@@ -353,6 +396,15 @@ export function useCharts(): {
 
   const { charts, activeId } = state
   const activeChart = charts.find((c) => c.id === activeId) ?? charts[0]
+
+  // Retry is offered only for a failed compact reconstruction (stubs retained in
+  // state), not for decode errors (no stubs) and not while a load is in flight.
+  // pendingReconstruction is retained on failure and cleared on success, so it is
+  // a render-safe signal for "there are stubs to retry".
+  const canRetryReconstruction =
+    state.pendingReconstruction !== undefined &&
+    state.reconstructionError !== undefined &&
+    !(state.isReconstructing ?? false)
 
   // Runs the updater against the freshest active chart from prev. Bails out without a
   // new state object when the updater returns the same reference (no-op paths like
@@ -430,6 +482,8 @@ export function useCharts(): {
     reconstructionError: state.reconstructionError ?? null,
     reconstructionWarning: state.reconstructionWarning ?? null,
     storageError: state.storageError ?? null,
+    canRetryReconstruction,
+    retryReconstruction,
     createChart,
     deleteChart,
     updateChart,

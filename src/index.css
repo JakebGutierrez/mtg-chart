@@ -98,3 +98,20 @@ input {
 .notifBannerWarning .notifDismiss { color: #c8a040; }
 
 .notifDismiss:hover { opacity: 1; }
+
+.notifBanner > span { flex: 1; }
+
+.notifAction {
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.notifAction:hover { opacity: 1; }
