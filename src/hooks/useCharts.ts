@@ -319,7 +319,8 @@ export function useCharts(): {
         const slots = reconstructSlots(stubs, cardMap)
         const warningCount = notFoundCount + normaliseFailCount
         setState((prev) => applyReconstructionSuccess(prev, placeholderId, slots, warningCount))
-        stripShareParam()
+        // ?c= is stripped by the effect watching unreconstructedPlaceholderId,
+        // which covers both success and the user-claim path.
       } catch (err) {
         if ((err as Error).name === 'AbortError') return
         setState((prev) =>
@@ -354,6 +355,21 @@ export function useCharts(): {
     void runReconstruction(stubs, placeholderId, controller.signal)
   }, [runReconstruction])
 
+  // Strip ?c= once a compact share placeholder is no longer pending — either it
+  // reconstructed (applyReconstructionSuccess clears the id) or the user claimed
+  // it by editing (updateChart clears the id). On failure the id is retained, so
+  // ?c= stays in the URL for reload-retry. Legacy links are handled by the
+  // mount-strip effect above (they have no pendingReconstruction).
+  useEffect(() => {
+    if (
+      consumedShareParamRef.current &&
+      pendingReconstructionRef.current !== null &&
+      state.unreconstructedPlaceholderId === undefined
+    ) {
+      stripShareParam()
+    }
+  }, [state.unreconstructedPlaceholderId])
+
   // Stable debounced persistence scheduler — created once, survives re-renders.
   // safeWrite never throws; a quota/storage failure flips storageError via the
   // idempotent nextStorageError transition.
@@ -372,15 +388,18 @@ export function useCharts(): {
 
   // Schedule a debounced write after every settled state change. An
   // un-reconstructed share placeholder is excluded (chartsToPersist) so it isn't
-  // written before its slots resolve; an empty result (only that placeholder
-  // exists) is skipped rather than clobbering storage with []. Deps are narrowed
-  // to the persisted slice + exclusion id so a storageError setState cannot
-  // re-enter this effect and retry a failing write (no quota loop).
+  // written before its slots resolve. Skipping an empty result applies ONLY while
+  // reconstruction is in flight (initial hydration: the lone chart is the
+  // not-yet-loaded placeholder, nothing to save). Once reconstruction has settled,
+  // an empty result is a real state — e.g. the user deleted the last
+  // non-placeholder chart — and must persist so the change survives reload. Deps
+  // are narrowed to the persisted slice so a storageError setState cannot re-enter
+  // this effect and retry a failing write (no quota loop).
   useEffect(() => {
     const toPersist = chartsToPersist(state.charts, state.unreconstructedPlaceholderId)
-    if (toPersist.length === 0) return
+    if (toPersist.length === 0 && state.isReconstructing) return
     schedulerRef.current!.schedule(toPersist, state.activeId)
-  }, [state.charts, state.activeId, state.unreconstructedPlaceholderId])
+  }, [state.charts, state.activeId, state.unreconstructedPlaceholderId, state.isReconstructing])
 
   // Flush a pending debounced write when the tab is hidden/closed so the last
   // change isn't lost inside the debounce window. cancel() on unmount avoids a
@@ -422,6 +441,25 @@ export function useCharts(): {
       const nextChart = updater(prevActiveChart)
       if (nextChart === prevActiveChart) return prev
       const charts = prev.charts.map((c) => (c.id === nextChart.id ? nextChart : c))
+      // Claim a failed share placeholder on its first real edit: once the user
+      // mutates it, it's their chart — drop the reconstruction exclusion (so it
+      // persists as a normal chart) and the retained stubs/error. The ?c= strip
+      // is handled by the effect watching unreconstructedPlaceholderId. Gated on
+      // !isReconstructing so an in-flight reconstruction isn't claimed out from
+      // under itself.
+      if (
+        prev.unreconstructedPlaceholderId !== undefined &&
+        prev.unreconstructedPlaceholderId === nextChart.id &&
+        !prev.isReconstructing
+      ) {
+        return {
+          ...prev,
+          charts,
+          unreconstructedPlaceholderId: undefined,
+          pendingReconstruction: undefined,
+          reconstructionError: undefined,
+        }
+      }
       return { ...prev, charts }
     })
   }, [])
