@@ -60,6 +60,14 @@ function App() {
   // title/colour edit starts a fresh undo entry (B4).
   const editBurstFieldRef = useRef<'title' | 'bgColor' | null>(null)
 
+  // Clear the burst when the active chart changes, so the first title/colour edit
+  // on the newly-active chart starts its own undo snapshot. Without this, a burst
+  // carried over from the previous chart (e.g. you were editing chart A's title)
+  // would suppress the first edit's snapshot on chart B, leaving it un-undoable.
+  useEffect(() => {
+    editBurstFieldRef.current = null
+  }, [activeId])
+
   // Wraps updateChart with history push. Runs the updater against activeChart first to
   // detect no-ops (same reference returned) and skip the history push in that case.
   // Known tradeoff: the no-op check runs on render-time activeChart while updateChart
