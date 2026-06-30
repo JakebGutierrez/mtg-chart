@@ -477,16 +477,34 @@ export function useCharts(): {
   const createChart = useCallback(() => {
     setState((prev) => {
       const fresh = createDefaultChart()
-      return { charts: [...prev.charts, fresh], activeId: fresh.id }
+      // Spread prev so reconstruction/storage context survives — creating a chart
+      // must not silently discard a failed share's placeholder or its ?c= retry.
+      return { ...prev, charts: [...prev.charts, fresh], activeId: fresh.id }
     })
   }, [])
 
   const deleteChart = useCallback((id: string) => {
     setState((prev) => {
       const remaining = prev.charts.filter((c) => c.id !== id)
+      // Drop reconstruction context only when the un-reconstructed placeholder
+      // itself is gone (deleted here, or no chart remains). Deleting a *sibling*
+      // chart preserves it, so a failed share keeps ?c= and its retry/reload path.
+      // (The strip effect keys on unreconstructedPlaceholderId, so clearing it
+      // here is what strips ?c= when the placeholder is discarded.)
+      const placeholderGone =
+        prev.unreconstructedPlaceholderId !== undefined &&
+        (id === prev.unreconstructedPlaceholderId || remaining.length === 0)
+      const clearedReconstruction = placeholderGone
+        ? {
+            unreconstructedPlaceholderId: undefined,
+            pendingReconstruction: undefined,
+            isReconstructing: false,
+            reconstructionError: undefined,
+          }
+        : {}
       if (remaining.length === 0) {
         const fresh = createDefaultChart()
-        return { charts: [fresh], activeId: fresh.id }
+        return { ...prev, ...clearedReconstruction, charts: [fresh], activeId: fresh.id }
       }
       let activeId = prev.activeId
       if (activeId === id) {
@@ -494,7 +512,7 @@ export function useCharts(): {
         // Activate previous sibling; falls back to first remaining when index 0 is deleted
         activeId = remaining[Math.max(0, deletedIndex - 1)].id
       }
-      return { charts: remaining, activeId }
+      return { ...prev, ...clearedReconstruction, charts: remaining, activeId }
     })
   }, [])
 

@@ -118,14 +118,53 @@ describe('failed-share placeholder claim + persistence (Fix 2)', () => {
       expect(result.current.reconstructionError).not.toBeNull()
       expect(result.current.charts.map((c) => c.name).sort()).toEqual(['Shared', 'Stored'])
 
-      // Delete the stored chart while the placeholder is still un-reconstructed.
+      // Delete the stored sibling while the placeholder is still un-reconstructed.
       act(() => { result.current.deleteChart('s1') })
+      // Deleting a sibling must NOT discard the failed share: ?c= is retained so
+      // reload-retry still works (regresses if deleteChart drops the exclusion id).
+      expect(hasShareParam()).toBe(true)
       act(() => { window.dispatchEvent(new Event('pagehide')) })
 
-      // ?c= is still present (placeholder not claimed), so reload re-derives one
-      // placeholder — but the deleted stored chart must NOT come back.
+      // The deletion still persists (gate writes [] post-reconstruction), so the
+      // stored chart does NOT come back; ?c= re-derives exactly one placeholder.
       const reloaded = loadOrInit()
       expect(reloaded.charts.some((c) => c.name === 'Stored')).toBe(false)
+      expect(reloaded.charts.filter((c) => c.name === 'Shared')).toHaveLength(1)
+    } finally {
+      unmount()
+    }
+  })
+
+  it('failed share → create a new chart → ?c= retained and placeholder still retriable', async () => {
+    openFailedShare()
+    const { result, unmount } = renderHook(() => useCharts())
+    try {
+      await flush()
+      expect(result.current.canRetryReconstruction).toBe(true)
+
+      act(() => { result.current.createChart() })
+
+      // Creating a chart doesn't touch the placeholder, so the failed share's
+      // recovery is preserved.
+      expect(hasShareParam()).toBe(true)
+      expect(result.current.canRetryReconstruction).toBe(true)
+    } finally {
+      unmount()
+    }
+  })
+
+  it('failed share → delete the placeholder itself → ?c= is dropped (share discarded)', async () => {
+    openFailedShare()
+    const { result, unmount } = renderHook(() => useCharts())
+    try {
+      await flush()
+      const placeholderId = result.current.activeId
+      expect(hasShareParam()).toBe(true)
+
+      act(() => { result.current.deleteChart(placeholderId) })
+
+      // Discarding the placeholder strips ?c= so reload won't re-derive it.
+      expect(hasShareParam()).toBe(false)
     } finally {
       unmount()
     }
