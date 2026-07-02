@@ -1,73 +1,40 @@
-# React + TypeScript + Vite
+# MTG Chart
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Topster-style collage builder for **Magic: The Gathering** card art. Search
+[Scryfall](https://scryfall.com) or paste a decklist, arrange the art into a grid,
+then export a PNG or share your chart with a link.
 
-Currently, two official plugins are available:
+**Live: [mtgchart.com](https://mtgchart.com)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+![MTG Chart screenshot](design/Screenshot%202026-06-21%20at%203.45.35%20pm.png)
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Scryfall search** — add cards by name; full Scryfall query syntax works.
+- **Decklist import** — paste an MTGO/Arena/Moxfield-style list and auto-fill the grid.
+- **Flexible grids** — resizable rows/cols, landscape or square cells, and a hybrid
+  hero layout for commanders.
+- **Arrange** — drag to reorder, sort by type/CMC/colour, or shuffle.
+- **Per-card framing** — pick alternate printings, flip double-faced cards, and crop.
+- **Custom slots** — drop in your own images alongside card art.
+- **Export** — high-resolution PNG rendered client-side via canvas.
+- **Share links** — the whole chart is encoded into a URL; no account needed.
+- **Local-first** — multiple charts persist in your browser; nothing is sent to a server.
 
-## Expanding the ESLint configuration
+## Development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev     # start the Vite dev server
+npm run build   # tsc -b && vite build
+npm run lint    # eslint
+npm run test    # vitest run
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+`npm run build && npm run lint && npm run test` is the full correctness gate — all
+three must pass before every commit.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Attribution
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Card data and images provided by [Scryfall](https://scryfall.com). Cards © Wizards
+of the Coast. This project is not affiliated with or endorsed by Scryfall or Wizards
+of the Coast.

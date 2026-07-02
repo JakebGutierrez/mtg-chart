@@ -1,0 +1,3 @@
+# Keep the design mockup/screenshot out of GitHub language stats so they
+# reflect the TypeScript codebase, not the committed HTML mockup.
+design/** linguist-vendored
